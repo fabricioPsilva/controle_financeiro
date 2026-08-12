@@ -20,14 +20,17 @@ const hashPassword = async (password) => {
 const getLocalUsers = () => {
   const users = localStorage.getItem('fin_users');
   if (!users) {
-    const defaultUsers = [{ username: 'admin', password_hash: null, is_admin: true, is_active: true }];
+    const defaultUsers = [{ username: 'admin', password_hash: null, is_admin: true, is_active: true, tour_done: false }];
     localStorage.setItem('fin_users', JSON.stringify(defaultUsers));
     return defaultUsers;
   }
   
   const parsed = JSON.parse(users);
-  // Guarantee is_active attribute exists on fallback
-  return parsed.map(u => ({ ...u, is_active: u.is_active !== undefined ? u.is_active : true }));
+  return parsed.map(u => ({ 
+    ...u, 
+    is_active: u.is_active !== undefined ? u.is_active : true,
+    tour_done: u.tour_done !== undefined ? u.tour_done : false
+  }));
 };
 
 const saveLocalUsers = (users) => {
@@ -126,8 +129,11 @@ export const listAllUsers = async () => {
       .order('username', { ascending: true });
     
     if (error) throw error;
-    // Map missing is_active safely
-    return data.map(u => ({ ...u, is_active: u.is_active !== undefined ? u.is_active : true }));
+    return data.map(u => ({ 
+      ...u, 
+      is_active: u.is_active !== undefined ? u.is_active : true,
+      tour_done: u.tour_done !== undefined ? u.tour_done : false
+    }));
   } catch (err) {
     console.error('Error listing users:', err);
     return getLocalUsers();
@@ -142,7 +148,7 @@ export const createNewUser = async (username, isAdmin = false) => {
     if (localUsers.some(u => u.username === normUser)) {
       return { success: false, message: 'Usuário já existe.' };
     }
-    const updated = [...localUsers, { username: normUser, password_hash: null, is_admin: isAdmin, is_active: true }];
+    const updated = [...localUsers, { username: normUser, password_hash: null, is_admin: isAdmin, is_active: true, tour_done: false }];
     saveLocalUsers(updated);
     return { success: true };
   }
@@ -150,7 +156,7 @@ export const createNewUser = async (username, isAdmin = false) => {
   try {
     const { error } = await supabase
       .from('users')
-      .insert({ username: normUser, password_hash: null, is_admin: isAdmin, is_active: true });
+      .insert({ username: normUser, password_hash: null, is_admin: isAdmin, is_active: true, tour_done: false });
 
     if (error) throw error;
     return { success: true };
@@ -186,6 +192,35 @@ export const toggleUserStatus = async (username, isActive) => {
   } catch (err) {
     console.error('Error toggling user status:', err);
     return { success: false, message: 'Erro ao alterar status do usuário no banco.' };
+  }
+};
+
+export const completeUserTour = async (username) => {
+  const normUser = username.trim().toLowerCase();
+
+  if (!isSupabaseConfigured) {
+    const localUsers = getLocalUsers();
+    const updated = localUsers.map(u => {
+      if (u.username === normUser) {
+        return { ...u, tour_done: true };
+      }
+      return u;
+    });
+    saveLocalUsers(updated);
+    return { success: true };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ tour_done: true })
+      .eq('username', normUser);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error('Error setting tour_done status:', err);
+    return { success: false };
   }
 };
 

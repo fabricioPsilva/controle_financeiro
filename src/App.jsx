@@ -17,7 +17,8 @@ import {
   getActiveProfile, 
   setActiveProfile as saveActiveProfile, 
   getProfileData, 
-  saveProfileData 
+  saveProfileData,
+  completeUserTour
 } from './utils/storage';
 import Dashboard from './components/Dashboard';
 import Transactions from './components/Transactions';
@@ -57,8 +58,7 @@ function App() {
       setLoading(false);
 
       // Check if tour should be launched automatically
-      const tourDone = localStorage.getItem(`fin_tour_done_${user.username}`);
-      if (!tourDone) {
+      if (!user.tour_done) {
         setShowTour(true);
       }
     };
@@ -394,8 +394,11 @@ function App() {
           user={user} 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
-          onClose={() => {
-            localStorage.setItem(`fin_tour_done_${user.username}`, 'true');
+          onClose={async () => {
+            await completeUserTour(user.username);
+            const updatedUser = { ...user, tour_done: true };
+            sessionStorage.setItem('fin_logged_in_user', JSON.stringify(updatedUser));
+            setUser(updatedUser);
             setShowTour(false);
           }} 
         />
