@@ -104,6 +104,12 @@ body {
 .grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 
+.grid-transactions-layout {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 20px;
+}
+
 @media (max-width: 768px) {
   .grid-2, .grid-3, .grid-4 {
     grid-template-columns: 1fr;
@@ -476,7 +482,7 @@ tr:hover td {
 
 /* Responsive adjustments for mobile devices */
 @media (max-width: 768px) {
-  .grid-4, .grid-3, .grid-2 {
+  .grid-4, .grid-3, .grid-2, .grid-transactions-layout {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
   }

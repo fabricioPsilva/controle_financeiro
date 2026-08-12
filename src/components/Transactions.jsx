@@ -427,7 +427,7 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
   displayItems.sort((a, b) => b.date.localeCompare(a.date));
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
+    <div className="grid grid-transactions-layout">
       
       {/* Transaction Input Form */}
       <div className="card" style={{ height: 'fit-content', display: 'flex', flexDirection: 'column' }}>
