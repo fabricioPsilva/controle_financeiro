@@ -24,6 +24,7 @@ import Transactions from './components/Transactions';
 import CreditCards from './components/CreditCards';
 import Login from './components/Login';
 import AdminPanel from './components/AdminPanel';
+import InteractiveTour from './components/InteractiveTour';
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -39,6 +40,7 @@ function App() {
   const [editingTransactionId, setEditingTransactionId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showTour, setShowTour] = useState(false);
 
   // Load active profile and its data on start/user login
   useEffect(() => {
@@ -53,6 +55,12 @@ function App() {
       const data = await getProfileData(profile);
       setProfileData(data);
       setLoading(false);
+
+      // Check if tour should be launched automatically
+      const tourDone = localStorage.getItem(`fin_tour_done_${user.username}`);
+      if (!tourDone) {
+        setShowTour(true);
+      }
     };
     initApp();
   }, [user]);
@@ -191,6 +199,7 @@ function App() {
         {/* User profile / Logout badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button 
+            id="btn-manual"
             onClick={() => setShowHelpModal(true)} 
             className="btn btn-secondary" 
             style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
@@ -221,18 +230,21 @@ function App() {
       {/* Navigation tabs */}
       <nav className="nav-tabs">
         <button 
+          id="nav-tab-dashboard"
           className={`nav-tab ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
         >
           <LayoutDashboard size={16} /> Painel
         </button>
         <button 
+          id="nav-tab-transactions"
           className={`nav-tab ${activeTab === 'transactions' ? 'active' : ''}`}
           onClick={() => setActiveTab('transactions')}
         >
           <Receipt size={16} /> Lançamentos
         </button>
         <button 
+          id="nav-tab-cards"
           className={`nav-tab ${activeTab === 'cards' ? 'active' : ''}`}
           onClick={() => setActiveTab('cards')}
         >
@@ -240,6 +252,7 @@ function App() {
         </button>
         {user.is_admin && (
           <button 
+            id="nav-tab-admin"
             className={`nav-tab ${activeTab === 'admin' ? 'active' : ''}`}
             onClick={() => setActiveTab('admin')}
           >
@@ -357,13 +370,35 @@ function App() {
 
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', marginTop: '16px', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', marginTop: '16px', paddingTop: '16px' }}>
+              <button 
+                onClick={() => {
+                  setShowHelpModal(false);
+                  setShowTour(true);
+                }} 
+                className="btn btn-secondary" 
+                style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Play size={13} style={{ fill: 'currentColor' }} /> Reassistir Tour Guiado
+              </button>
               <button onClick={() => setShowHelpModal(false)} className="btn btn-primary" style={{ padding: '8px 20px' }}>
-                Entendi
+                Fechar
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {showTour && (
+        <InteractiveTour 
+          user={user} 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          onClose={() => {
+            localStorage.setItem(`fin_tour_done_${user.username}`, 'true');
+            setShowTour(false);
+          }} 
+        />
       )}
     </div>
   );
