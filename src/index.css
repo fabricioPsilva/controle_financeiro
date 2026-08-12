@@ -208,6 +208,11 @@ body {
   transition: var(--transition);
 }
 
+select option {
+  background-color: #111827; /* Cor sólida escura para garantir visibilidade */
+  color: #f8fafc;
+}
+
 .form-control:focus, select:focus, input:focus {
   border-color: var(--color-primary);
   background: rgba(255, 255, 255, 0.07);
