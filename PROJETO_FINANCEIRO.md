@@ -43,16 +43,20 @@ Um sistema moderno de controle financeiro pessoal e familiar com suporte a múlt
 * **Visualização por Cartões (Cards)**: Em viewports móveis (< 768px), as tabelas de lançamentos são ocultadas e convertidas para uma exibição de cartões individuais (estilo carteira digital).
 * **Empilhamento de Grid**: Todos os formulários e filtros de pesquisa se reorganizam automaticamente em uma única coluna no celular, evitando rolagens horizontais.
 
-### 4. Cálculo de Fatura por Ciclo de Fechamento
+### 4. Lançamento com Frequência de "Assinatura"
+* **Opção de Assinatura**: Adicionada a opção "Assinatura / Mensalidade (Fixo no Cartão)" na frequência de repetição.
+* **Comportamento**: Funciona de forma recorrente (como um gasto fixo mensal), mas atrelada ao fluxo de faturamento do cartão de crédito físico selecionado, exibindo a tag **Assinatura** na listagem de lançamentos desktop e mobile.
+
+### 5. Cálculo de Fatura por Ciclo de Fechamento
 As despesas do cartão não são contabilizadas pelo mês calendário da transação, mas sim pelo ciclo da fatura:
 * **Algoritmo (`invoiceUtils.js`)**: Compara o dia da transação com o `closingDay` (dia de fechamento) do cartão. Se o dia for posterior ao fechamento, a compra é atribuída à fatura do mês seguinte.
 
-### 5. Divisão e Agendamento de Parcelas
+### 6. Divisão e Agendamento de Parcelas
 * Ao lançar uma compra parcelada, o usuário insere o **Valor Total** e a **Quantidade de Parcelas**.
 * O sistema cria $N$ lançamentos distribuídos mês a mês, calculando o valor individual da parcela (`Total / N`).
 * A descrição é enriquecida automaticamente: `[Descrição] (Parcela X/N - Total R$ [Total])`.
 
-### 6. Edição e Deleção de Parcelados em Cascata
+### 7. Edição e Deleção de Parcelados em Cascata
 * As parcelas geradas compartilham um `installmentGroupId`.
 * **Edição**: Ao editar qualquer parcela do grupo, o formulário recarrega a compra total original (descrição limpa, valor total e parcelas originais). Ao salvar, as parcelas antigas do grupo são excluídas e re-geradas sob os novos critérios.
 * **Exclusão**: O usuário pode optar por excluir apenas a parcela individual daquele mês ou apagar a compra completa (todas as parcelas vinculadas).
@@ -68,7 +72,7 @@ As despesas do cartão não são contabilizadas pelo mês calendário da transa�
 * [`src/components/AdminPanel.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/AdminPanel.jsx): Painel do administrador para listagem, criação, inativação e reset de usuários.
 * [`src/components/InteractiveTour.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/InteractiveTour.jsx): Componente que renderiza o tour guiado e o spotlight nos elementos destacados.
 * [`src/components/CreditCards.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/CreditCards.jsx): Gerenciamento de limites, faturas e parcelas.
-* [`src/components/Transactions.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/Transactions.jsx): Lançamento de despesas e receitas com visualização dupla (desktop/mobile).
+* [`src/components/Transactions.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/Transactions.jsx): Lançamento de despesas e receitas com visualização dupla (desktop/mobile) e controle de repetição.
 * [`src/components/Dashboard.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/Dashboard.jsx): Gráficos Recharts e conselhos financeiros baseados no usuário logado.
 
 ---
