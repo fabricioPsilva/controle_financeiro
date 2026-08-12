@@ -8,58 +8,234 @@ const DEFAULT_BUDGET_CONFIG = [
   { id: 'savings', label: 'Poupança / Reserva', target: 20, matchType: 'type', matchValue: 'savings' }
 ];
 
-// Helpers to handle fallback to localStorage
-const getLocalProfiles = () => {
-  const profiles = localStorage.getItem('fin_profiles');
-  if (!profiles) {
-    localStorage.setItem('fin_profiles', JSON.stringify(DEFAULT_PROFILES));
-    return DEFAULT_PROFILES;
-  }
-  return JSON.parse(profiles);
+// Helper to hash passwords simply (client-side SHA-256 equivalent or simple obfuscation for security)
+const hashPassword = async (password) => {
+  const msgUint8 = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-export const getProfiles = async () => {
+// Local storage user fallback helpers
+const getLocalUsers = () => {
+  const users = localStorage.getItem('fin_users');
+  if (!users) {
+    // Seed default admin with no password
+    const defaultUsers = [{ username: 'admin', password_hash: null, is_admin: true }];
+    localStorage.setItem('fin_users', JSON.stringify(defaultUsers));
+    return defaultUsers;
+  }
+  return JSON.parse(users);
+};
+
+const saveLocalUsers = (users) => {
+  localStorage.setItem('fin_users', JSON.stringify(users));
+};
+
+// ----------------------------------------------------
+// USER AUTHENTICATION & ADMIN API
+// ----------------------------------------------------
+
+export const loginUser = async (username, password) => {
+  const normUser = username.trim().toLowerCase();
+  
   if (!isSupabaseConfigured) {
-    return getLocalProfiles();
+    const localUsers = getLocalUsers();
+    const user = localUsers.find(u => u.username === normUser);
+    if (!user) return { success: false, message: 'Usuário não cadastrado.' };
+    
+    if (user.password_hash === null) {
+      return { success: false, code: 'FIRST_ACCESS', user };
+    }
+    
+    const hashed = await hashPassword(password);
+    if (user.password_hash === hashed) {
+      return { success: true, user };
+    }
+    return { success: false, message: 'Senha incorreta.' };
   }
 
   try {
     const { data, error } = await supabase
-      .from('profiles_data')
-      .select('profile_name');
-    
-    if (error) throw error;
+      .from('users')
+      .select('*')
+      .eq('username', normUser)
+      .maybeSingle();
 
-    if (!data || data.length === 0) {
-      // Seed default profile
-      await saveProfileData(DEFAULT_PROFILES[0], {
-        transactions: [],
-        creditCards: [],
-        budgetConfig: [...DEFAULT_BUDGET_CONFIG]
-      });
-      return DEFAULT_PROFILES;
+    if (error) throw error;
+    if (!data) return { success: false, message: 'Usuário não cadastrado.' };
+
+    if (data.password_hash === null) {
+      return { success: false, code: 'FIRST_ACCESS', user: data };
     }
-    return data.map(row => row.profile_name);
+
+    const hashed = await hashPassword(password);
+    if (data.password_hash === hashed) {
+      return { success: true, user: data };
+    }
+    return { success: false, message: 'Senha incorreta.' };
   } catch (err) {
-    console.error('Error fetching profiles from Supabase, falling back to local:', err);
-    return getLocalProfiles();
+    console.error('Error logging in user:', err);
+    return { success: false, message: 'Erro na conexão com o banco de dados.' };
   }
 };
 
-export const saveProfiles = async (profiles) => {
+export const registerUserPassword = async (username, password) => {
+  const normUser = username.trim().toLowerCase();
+  const hashed = await hashPassword(password);
+
   if (!isSupabaseConfigured) {
-    localStorage.setItem('fin_profiles', JSON.stringify(profiles));
-    return;
+    const localUsers = getLocalUsers();
+    const updated = localUsers.map(u => {
+      if (u.username === normUser) {
+        return { ...u, password_hash: hashed };
+      }
+      return u;
+    });
+    saveLocalUsers(updated);
+    return { success: true };
   }
-  // With Supabase, profiles are created dynamically by inserting a profile row,
-  // so no explicit sync is needed for the global list of profiles.
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ password_hash: hashed })
+      .eq('username', normUser);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error('Error registering password:', err);
+    return { success: false, message: 'Erro ao registrar a senha no banco.' };
+  }
+};
+
+export const listAllUsers = async () => {
+  if (!isSupabaseConfigured) {
+    return getLocalUsers();
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('username', { ascending: true });
+    
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error listing users:', err);
+    return getLocalUsers();
+  }
+};
+
+export const createNewUser = async (username, isAdmin = false) => {
+  const normUser = username.trim().toLowerCase();
+
+  if (!isSupabaseConfigured) {
+    const localUsers = getLocalUsers();
+    if (localUsers.some(u => u.username === normUser)) {
+      return { success: false, message: 'Usuário já existe.' };
+    }
+    const updated = [...localUsers, { username: normUser, password_hash: null, is_admin: isAdmin }];
+    saveLocalUsers(updated);
+    return { success: true };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .insert({ username: normUser, password_hash: null, is_admin: isAdmin });
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error('Error creating user:', err);
+    return { success: false, message: 'Erro ao cadastrar usuário no banco.' };
+  }
+};
+
+export const resetUserPassword = async (username) => {
+  const normUser = username.trim().toLowerCase();
+
+  if (!isSupabaseConfigured) {
+    const localUsers = getLocalUsers();
+    const updated = localUsers.map(u => {
+      if (u.username === normUser) {
+        return { ...u, password_hash: null };
+      }
+      return u;
+    });
+    saveLocalUsers(updated);
+    return { success: true };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ password_hash: null })
+      .eq('username', normUser);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error('Error resetting password:', err);
+    return { success: false, message: 'Erro ao resetar senha no banco.' };
+  }
+};
+
+export const deleteUserAccount = async (username) => {
+  const normUser = username.trim().toLowerCase();
+
+  if (!isSupabaseConfigured) {
+    const localUsers = getLocalUsers();
+    const updated = localUsers.filter(u => u.username !== normUser);
+    saveLocalUsers(updated);
+    localStorage.removeItem(`fin_data_${normUser}`);
+    return { success: true };
+  }
+
+  try {
+    // Delete authentication record
+    const { error: userError } = await supabase
+      .from('users')
+      .delete()
+      .eq('username', normUser);
+    if (userError) throw userError;
+
+    // Delete associated data record
+    const { error: dataError } = await supabase
+      .from('profiles_data')
+      .delete()
+      .eq('profile_name', normUser);
+    if (dataError) throw dataError;
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error deleting user account:', err);
+    return { success: false, message: 'Erro ao deletar usuário do banco.' };
+  }
+};
+
+// ----------------------------------------------------
+// PROFILE DATA STORAGE (SANDBOXED BY USERNAME)
+// ----------------------------------------------------
+
+export const getProfiles = async () => {
+  // Profiles list is derived from the users list
+  const users = await listAllUsers();
+  return users.map(u => u.username);
+};
+
+export const saveProfiles = async (profiles) => {
+  // Handled dynamically by creating new users via the AdminPanel
 };
 
 export const getActiveProfile = () => {
   const active = localStorage.getItem('fin_active_profile');
   if (!active) {
-    localStorage.setItem('fin_active_profile', DEFAULT_PROFILES[0]);
-    return DEFAULT_PROFILES[0];
+    localStorage.setItem('fin_active_profile', 'admin');
+    return 'admin';
   }
   return active;
 };
@@ -95,7 +271,6 @@ export const getProfileData = async (profileName) => {
     if (error) throw error;
 
     if (!data) {
-      // Create profile row if it doesn't exist
       await saveProfileData(profileName, defaultData);
       return defaultData;
     }
@@ -133,7 +308,6 @@ export const saveProfileData = async (profileName, data) => {
   }
 };
 
-// Helper to sanitize and migrate schemas
 const sanitizeProfileData = (parsed) => {
   if (!parsed.transactions) parsed.transactions = [];
   if (!parsed.creditCards) parsed.creditCards = [];

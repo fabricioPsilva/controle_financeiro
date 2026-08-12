@@ -7,7 +7,9 @@ import {
   User, 
   Wallet,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut,
+  Settings
 } from 'lucide-react';
 import { 
   getActiveProfile, 
@@ -18,32 +20,41 @@ import {
 import Dashboard from './components/Dashboard';
 import Transactions from './components/Transactions';
 import CreditCards from './components/CreditCards';
-import Profiles from './components/Profiles';
+import Login from './components/Login';
+import AdminPanel from './components/AdminPanel';
 
 function App() {
+  const [user, setUser] = useState(() => {
+    const saved = sessionStorage.getItem('fin_logged_in_user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [activeProfile, setActiveProfile] = useState('');
   const [profileData, setProfileData] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, transactions, cards, profiles
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, transactions, cards, admin
   const [selectedMonth, setSelectedMonth] = useState(() => {
     return new Date().toISOString().substring(0, 7); // "YYYY-MM"
   });
   const [editingTransactionId, setEditingTransactionId] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load active profile and its data on start
+  // Load active profile and its data on start/user login
   useEffect(() => {
     const initApp = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
-      const profile = getActiveProfile();
+      const profile = user.username;
       setActiveProfile(profile);
       const data = await getProfileData(profile);
       setProfileData(data);
       setLoading(false);
     };
     initApp();
-  }, []);
+  }, [user]);
 
-  // Handle changing active profile
+  // Handle changing active profile (used on login)
   const handleProfileChange = async (newProfile) => {
     setLoading(true);
     setActiveProfile(newProfile);
@@ -82,15 +93,18 @@ function App() {
     return `${monthsName[parseInt(month) - 1]} de ${year}`;
   };
 
-  if (!profileData) {
+  if (!user) {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontSize: '18px', color: 'var(--text-secondary)' }}>Carregando dados...</div>
-      </div>
+      <Login 
+        onLoginSuccess={(loggedInUser) => {
+          sessionStorage.setItem('fin_logged_in_user', JSON.stringify(loggedInUser));
+          setUser(loggedInUser);
+        }} 
+      />
     );
   }
 
-  if (loading) {
+  if (loading || !profileData) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
         <style>{`
@@ -171,14 +185,25 @@ function App() {
           </button>
         </div>
 
-        {/* Quick profile switch badge */}
-        <div 
-          className="profile-badge" 
-          onClick={() => setActiveTab('profiles')}
-          title="Clique para gerenciar perfis"
-        >
-          <User size={14} />
-          <span>Perfil: {activeProfile}</span>
+        {/* User profile / Logout badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="profile-badge" style={{ cursor: 'default' }}>
+            <User size={14} />
+            <span>
+              {user.username} {user.is_admin && <span style={{ fontSize: '9px', background: 'rgba(99, 102, 241, 0.2)', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px', color: 'var(--color-primary)' }}>Admin</span>}
+            </span>
+          </div>
+          <button 
+            onClick={() => {
+              sessionStorage.removeItem('fin_logged_in_user');
+              setUser(null);
+              setProfileData(null);
+            }} 
+            className="btn btn-secondary" 
+            style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--color-danger)' }}
+          >
+            <LogOut size={13} /> Sair
+          </button>
         </div>
       </header>
 
@@ -202,12 +227,14 @@ function App() {
         >
           <CardIcon size={16} /> Cartões
         </button>
-        <button 
-          className={`nav-tab ${activeTab === 'profiles' ? 'active' : ''}`}
-          onClick={() => setActiveTab('profiles')}
-        >
-          <Users size={16} /> Perfis / Usuários
-        </button>
+        {user.is_admin && (
+          <button 
+            className={`nav-tab ${activeTab === 'admin' ? 'active' : ''}`}
+            onClick={() => setActiveTab('admin')}
+          >
+            <Settings size={16} /> Administração
+          </button>
+        )}
       </nav>
 
       {/* Main content display based on active tab */}
@@ -238,10 +265,9 @@ function App() {
             }}
           />
         )}
-        {activeTab === 'profiles' && (
-          <Profiles 
-            activeProfile={activeProfile} 
-            onProfileChange={handleProfileChange} 
+        {user.is_admin && activeTab === 'admin' && (
+          <AdminPanel 
+            loggedInUser={user}
           />
         )}
       </main>
