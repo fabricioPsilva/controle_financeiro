@@ -159,6 +159,23 @@ export default function CreditCards({ profileData, onUpdateProfileData, onEditTr
         ...profileData,
         transactions: [...generatedTransactions, ...transactions]
       });
+    } else if (cardRecurrenceType === 'subscription') {
+      const newTransaction = {
+        id: Date.now().toString(),
+        description: cardDesc.trim(),
+        amount: baseAmount,
+        type: cardType,
+        category: cardCategory,
+        date: cardDate,
+        tags: [...tags, 'assinatura', 'cartao'],
+        cardId: card.id,
+        recurrenceType: 'subscription'
+      };
+
+      onUpdateProfileData({
+        ...profileData,
+        transactions: [newTransaction, ...transactions]
+      });
     }
 
     setCardDesc('');
@@ -530,6 +547,7 @@ export default function CreditCards({ profileData, onUpdateProfileData, onEditTr
                             <select value={cardRecurrenceType} onChange={(e) => setCardRecurrenceType(e.target.value)}>
                               <option value="single">Gasto Único</option>
                               <option value="installments">Parcelado</option>
+                              <option value="subscription">Assinatura</option>
                             </select>
                           </div>
                           {cardRecurrenceType === 'installments' && (

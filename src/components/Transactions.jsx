@@ -74,7 +74,7 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
         setType(t.type);
         setCategory(t.category);
         setDate(t.date);
-        setTagsInput(t.tags.filter(tag => tag !== 'fixo' && tag !== 'parcelado' && tag !== 'cartao').join(', '));
+        setTagsInput(t.tags.filter(tag => tag !== 'fixo' && tag !== 'parcelado' && tag !== 'cartao' && tag !== 'assinatura').join(', '));
         setSelectedCardId(t.cardId || '');
         setRecurrenceType(t.recurrenceType || 'single');
       }
@@ -141,7 +141,7 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
               type,
               category,
               date,
-              tags,
+              tags: [...tags, recurrenceType === 'fixed' ? 'fixo' : recurrenceType === 'subscription' ? 'assinatura' : ''].filter(Boolean),
               cardId: selectedCardId || null,
               recurrenceType: recurrenceType
             };
@@ -220,6 +220,23 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
           tags: [...tags, 'fixo'],
           cardId: selectedCardId || null,
           recurrenceType: 'fixed'
+        };
+
+        onUpdateProfileData({
+          ...profileData,
+          transactions: [newTransaction, ...transactions]
+        });
+      } else if (recurrenceType === 'subscription') {
+        const newTransaction = {
+          id: Date.now().toString(),
+          description: description.trim(),
+          amount: baseAmount,
+          type,
+          category,
+          date,
+          tags: [...tags, 'assinatura'],
+          cardId: selectedCardId || null,
+          recurrenceType: 'subscription'
         };
 
         onUpdateProfileData({
@@ -331,7 +348,7 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
       }
     }
 
-    if (t.recurrenceType === 'fixed') {
+    if (t.recurrenceType === 'fixed' || t.recurrenceType === 'subscription') {
       if (selectedMonth >= tMonth) {
         activeMonthTransactions.push({
           ...t,
@@ -462,6 +479,7 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
                 <option value="single">Lançamento Único (Apenas este mês)</option>
                 {!editingId && <option value="installments">Parcelado (Ex: compras em 10x)</option>}
                 <option value="fixed">Fixo / Recorrente (Repete todos os meses)</option>
+                <option value="subscription">Assinatura / Mensalidade (Fixo no Cartão)</option>
               </select>
             </div>
           )}
@@ -737,6 +755,11 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
                                   Fixo
                                 </span>
                               )}
+                              {item.recurrenceType === 'subscription' && (
+                                <span style={{ fontSize: '9px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--color-income)', padding: '1px 4px', borderRadius: '3px' }}>
+                                  Assinatura
+                                </span>
+                              )}
                               {item.recurrenceType === 'installment_item' && (
                                 <span style={{ fontSize: '9px', background: 'rgba(244, 63, 94, 0.15)', color: 'var(--color-variable)', padding: '1px 4px', borderRadius: '3px' }}>
                                   Parc.
@@ -860,12 +883,17 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
                           {isIncome ? '+' : '-'} R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
-                      
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', fontSize: '12px' }}>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span className={`badge badge-${item.type}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
                             {item.type === 'income' ? 'Receita' : item.type === 'essential' ? 'Essencial' : 'Variável'}
                           </span>
+                          {item.recurrenceType === 'fixed' && (
+                            <span className="badge" style={{ fontSize: '9px', padding: '2px 6px', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-primary)' }}>Fixo</span>
+                          )}
+                          {item.recurrenceType === 'subscription' && (
+                            <span className="badge" style={{ fontSize: '9px', padding: '2px 6px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--color-income)' }}>Assinatura</span>
+                          )}
                           <span style={{ color: 'var(--text-secondary)' }}>{item.category}</span>
                         </div>
                         <span style={{ color: 'var(--text-muted)' }}>
