@@ -12,6 +12,11 @@ export default function AdminPanel({ loggedInUser }) {
   const [actionMessage, setActionMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Search and Filter States
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive
+  const [roleFilter, setRoleFilter] = useState('all'); // all, admin, user
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -27,6 +32,17 @@ export default function AdminPanel({ loggedInUser }) {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const filteredUsers = usersList.filter(u => {
+    const matchesSearch = u.username.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && u.is_active) || 
+      (statusFilter === 'inactive' && !u.is_active);
+    const matchesRole = roleFilter === 'all' || 
+      (roleFilter === 'admin' && u.is_admin) || 
+      (roleFilter === 'user' && !u.is_admin);
+    return matchesSearch && matchesStatus && matchesRole;
+  });
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -188,12 +204,44 @@ export default function AdminPanel({ loggedInUser }) {
             </button>
           </div>
 
+          {/* Search and Filters Bar */}
+          <div style={{ background: 'rgba(255,255,255,0.01)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <input 
+                  type="text" 
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  placeholder="Pesquisar usuário..." 
+                  style={{ padding: '8px 12px 8px 32px', fontSize: '13px' }}
+                />
+                <span style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--text-muted)' }}>🔍</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ flex: 1, minWidth: '110px', padding: '6px 10px', fontSize: '12px' }}>
+                <option value="all">Todos os Status</option>
+                <option value="active">Apenas Ativos</option>
+                <option value="inactive">Apenas Inativos</option>
+              </select>
+              <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} style={{ flex: 1, minWidth: '110px', padding: '6px 10px', fontSize: '12px' }}>
+                <option value="all">Todas as Funções</option>
+                <option value="admin">Administradores</option>
+                <option value="user">Usuários Padrão</option>
+              </select>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+              <span>Filtrados: {filteredUsers.length}</span>
+              <span>Total: {usersList.length}</span>
+            </div>
+          </div>
+
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
               Carregando lista de usuários...
             </div>
           ) : (
-            <div className="table-wrapper">
+            <div className="table-wrapper" style={{ maxHeight: '350px', overflowY: 'auto' }}>
               <table>
                 <thead>
                   <tr>
@@ -204,7 +252,7 @@ export default function AdminPanel({ loggedInUser }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {usersList.map((user) => (
+                  {filteredUsers.map((user) => (
                     <tr key={user.username} style={{ opacity: user.is_active ? 1 : 0.6 }}>
                       <td style={{ fontWeight: 600 }}>{user.username}</td>
                       <td>
