@@ -23,10 +23,13 @@ Um sistema moderno de controle financeiro pessoal e familiar com suporte a múlt
 
 ### 1. Sistema de Segurança e Autenticação (Login e Usuários)
 * **Estrutura de Login**: Tela com validação de usuário e senha atrelada à tabela `users` do Supabase. As senhas são criptografadas localmente via SHA-256 antes de serem salvas/comparadas.
-* **Isolamento de Dados**: Os dados financeiros (lançamentos, cartões, metas) são recuperados com base no nome de usuário logado, garantindo privacidade total ("maria" não vê dados de "admin").
+* **Isolamento de Dados**: Os dados financeiros (lançamentos, cartões, metas) são recuperados com base no nome de usuário logado, garantindo privacidade total.
 * **Perfil Administrador**: O usuário padrão `admin` possui a flag `is_admin: true`.
   * Somente o administrador tem acesso ao menu **Administração**.
   * O administrador cria novos logins (nomes de usuário).
+* **Ativação / Inativação de Contas**: O administrador pode inativar ou reativar qualquer conta no painel de administração.
+  * Usuários inativos são bloqueados na tela de login e não conseguem acessar o sistema.
+  * **Preservação de Dados**: Ao inativar uma conta, todos os dados financeiros do usuário são integralmente mantidos no banco de dados (não há exclusão de registros).
 * **Primeiro Acesso**: Novos usuários são criados sem senha (campo `password_hash` nulo). No primeiro login, a aplicação detecta e solicita a criação de uma senha personalizada.
 * **Reset de Senha**: O administrador pode resetar a senha de qualquer usuário através de um botão no painel de administração (o que limpa a senha no banco e força o usuário a criar uma nova senha no próximo login).
 
@@ -52,7 +55,7 @@ As despesas do cartão não são contabilizadas pelo mês calendário da transa�
 * [`src/utils/storage.js`](file:///home/fabricio/fabricio/controle_financeiro_3/src/utils/storage.js): Abstração de persistência assíncrona (Supabase / LocalStorage), incluindo validações de autenticação e gerenciamento de logins.
 * [`src/utils/invoiceUtils.js`](file:///home/fabricio/fabricio/controle_financeiro_3/src/utils/invoiceUtils.js): Lógica de cálculo de faturas.
 * [`src/components/Login.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/Login.jsx): Formulário de autenticação e redefinição de senhas de primeiro acesso.
-* [`src/components/AdminPanel.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/AdminPanel.jsx): Painel do administrador para listagem, criação e reset de usuários.
+* [`src/components/AdminPanel.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/AdminPanel.jsx): Painel do administrador para listagem, criação, inativação e reset de usuários.
 * [`src/components/CreditCards.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/CreditCards.jsx): Gerenciamento de limites, faturas e parcelas.
 * [`src/components/Transactions.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/Transactions.jsx): Lançamento de despesas e receitas.
 * [`src/components/Dashboard.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/Dashboard.jsx): Gráficos Recharts e conselhos financeiros baseados no usuário logado.
@@ -64,7 +67,7 @@ As despesas do cartão não são contabilizadas pelo mês calendário da transa�
 A aplicação está configurada para deploy no **GitHub Pages** e conexão com o **Supabase**, rodando com sucesso localmente. Os próximos passos necessários para o usuário configurar as ferramentas são:
 
 1. **Configuração de Chaves do Banco**:
-   - Rodar o script SQL de criação das tabelas `users` e `profiles_data` no painel do Supabase.
+   - Rodar o script SQL de criação/atualização das tabelas `users` e `profiles_data` no painel do Supabase.
 2. **Primeiro Acesso**:
    - Acessar o site, digitar `admin` e definir a senha mestra.
-   - Pelo painel `Administração`, criar as novas contas para os membros do sistema.
+   - Pelo painel `Administração`, criar e gerenciar as contas de acesso.
