@@ -16,6 +16,19 @@ export default function Login({ onLoginSuccess }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  const validatePasswordStrength = (pass) => {
+    if (!pass || pass.length < 8) {
+      return 'A senha deve conter pelo menos 8 caracteres.';
+    }
+    if (!/[A-Z]/.test(pass)) {
+      return 'A senha deve conter pelo menos uma letra maiúscula.';
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pass)) {
+      return 'A senha deve conter pelo menos um caractere especial (Ex: !, @, #, $, %, etc).';
+    }
+    return null;
+  };
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!username.trim()) return;
@@ -44,8 +57,9 @@ export default function Login({ onLoginSuccess }) {
 
   const handleFirstAccessSubmit = async (e) => {
     e.preventDefault();
-    if (!newPassword || newPassword.length < 4) {
-      setErrorMsg('A senha deve conter pelo menos 4 caracteres.');
+    const strengthError = validatePasswordStrength(newPassword);
+    if (strengthError) {
+      setErrorMsg(strengthError);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -83,8 +97,9 @@ export default function Login({ onLoginSuccess }) {
     const cleanUser = username.trim().toLowerCase();
     if (!cleanUser) return;
 
-    if (!newPassword || newPassword.length < 4) {
-      setErrorMsg('A senha deve conter pelo menos 4 caracteres.');
+    const strengthError = validatePasswordStrength(newPassword);
+    if (strengthError) {
+      setErrorMsg(strengthError);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -290,7 +305,7 @@ export default function Login({ onLoginSuccess }) {
                 type="password" 
                 value={newPassword} 
                 onChange={(e) => setNewPassword(e.target.value)} 
-                placeholder="Mínimo 4 caracteres"
+                placeholder="Mínimo 8 caracteres, 1 maiúscula, 1 especial"
                 required
                 disabled={loading}
               />
@@ -347,7 +362,7 @@ export default function Login({ onLoginSuccess }) {
                 type="password" 
                 value={newPassword} 
                 onChange={(e) => setNewPassword(e.target.value)} 
-                placeholder="Mínimo 4 caracteres"
+                placeholder="Mínimo 8 caracteres, 1 maiúscula, 1 especial"
                 required
                 disabled={loading}
               />
