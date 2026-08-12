@@ -13,8 +13,9 @@ Um sistema moderno de controle financeiro pessoal e familiar com suporte a múlt
 * **Estilização**: CSS Vanilla (Design Premium escuro com glassmorfismo)
 * **Gráficos**: Recharts
 * **Ícones**: Lucide React
+* **Hospedagem & Deploy**: **Cloudflare Pages** (Deploy automático contínuo via GitHub ao fazer push na branch `main`)
 * **Persistência (Banco de Dados)**: Arquitetura Híbrida:
-  * **Supabase** (PostgreSQL na nuvem com tabelas de usuários e dados JSONB) se configurado no `.env`.
+  * **Supabase** (PostgreSQL na nuvem com tabelas de usuários e dados JSONB) se configurado no painel da Cloudflare.
   * **LocalStorage** do navegador como fallback automático.
 
 ---
@@ -85,10 +86,10 @@ As despesas do cartão não são contabilizadas pelo mês calendário da transa�
 
 ## 📍 Onde Paramos & Próximos Passos
 
-A aplicação está configurada para deploy no **GitHub Pages** e conexão com o **Supabase**, rodando com sucesso localmente. Os próximos passos necessários para o usuário configurar as ferramentas são:
+A aplicação está configurada e rodando no **Cloudflare Pages** com conexão direta ao **Supabase**. Os próximos passos são:
 
 1. **Configuração de Chaves do Banco**:
    - Rodar o script SQL de criação das tabelas `users` (com colunas `is_active` e `tour_done`) e `profiles_data` no painel do Supabase.
 2. **Primeiro Acesso**:
-   - Acessar o site, digitar `admin` e definir a senha mestra.
-   - Pelo painel `Administração`, criar e gerenciar as contas de acesso.
+   - Acessar o link do seu projeto no Cloudflare Pages (ex: `https://controle-financeiro.pages.dev`).
+   - Logar com o usuário `admin`, deixar a senha em branco para cadastrá-la no primeiro acesso.
