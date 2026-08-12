@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Trash2, RotateCcw, ShieldCheck, Users, RefreshCw, UserCheck, UserX } from 'lucide-react';
-import { listAllUsers, createNewUser, resetUserPassword, deleteUserAccount, toggleUserStatus } from '../utils/storage';
+import { listAllUsers, createNewUser, resetUserPassword, deleteUserAccount, toggleUserStatus, approveUserRequest } from '../utils/storage';
 
 export default function AdminPanel({ loggedInUser }) {
   const [usersList, setUsersList] = useState([]);
@@ -16,6 +16,7 @@ export default function AdminPanel({ loggedInUser }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive
   const [roleFilter, setRoleFilter] = useState('all'); // all, admin, user
+  const [pendingExpirations, setPendingExpirations] = useState({});
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -34,6 +35,8 @@ export default function AdminPanel({ loggedInUser }) {
   }, []);
 
   const filteredUsers = usersList.filter(u => {
+    if (u.is_pending) return false;
+
     const matchesSearch = u.username.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'active' && u.is_active) || 
@@ -43,6 +46,57 @@ export default function AdminPanel({ loggedInUser }) {
       (roleFilter === 'user' && !u.is_admin);
     return matchesSearch && matchesStatus && matchesRole;
   });
+
+  const handleApprove = async (username) => {
+    setActionMessage('');
+    setErrorMsg('');
+    try {
+      const expDate = pendingExpirations[username] || null;
+      const res = await approveUserRequest(username, expDate);
+      if (res.success) {
+        setActionMessage(`Usuário "${username}" aprovado com sucesso!`);
+        fetchUsers();
+      } else {
+        setErrorMsg(res.message || 'Erro ao aprovar usuário.');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Erro ao aprovar usuário.');
+    }
+  };
+
+  const handleReject = async (username) => {
+    setActionMessage('');
+    setErrorMsg('');
+    if (confirm(`Deseja recusar e deletar a solicitação de cadastro do usuário "${username}"?`)) {
+      try {
+        const res = await deleteUserAccount(username);
+        if (res.success) {
+          setActionMessage(`Solicitação do usuário "${username}" foi recusada.`);
+          fetchUsers();
+        } else {
+          setErrorMsg(res.message || 'Erro ao recusar solicitação.');
+        }
+      } catch (err) {
+        console.error(err);
+        setErrorMsg('Erro ao recusar solicitação.');
+      }
+    }
+  };
+
+  const handleUpdateExpiration = async (username, date) => {
+    try {
+      const res = await approveUserRequest(username, date || null);
+      if (res.success) {
+        fetchUsers();
+      } else {
+        setErrorMsg(res.message || 'Erro ao atualizar data de vencimento.');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Erro de conexão ao atualizar data.');
+    }
+  };
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -157,9 +211,11 @@ export default function AdminPanel({ loggedInUser }) {
       )}
 
       <div className="grid grid-2">
-        {/* Create User Form */}
-        <div className="card" style={{ height: 'fit-content' }}>
-          <h2 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Left Column: Create User & Access Requests */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Create User Form */}
+          <div className="card" style={{ height: 'fit-content' }}>
+            <h2 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <UserPlus size={18} /> Novo Perfil / Usuário
           </h2>
           <form onSubmit={handleCreateUser}>
@@ -191,6 +247,59 @@ export default function AdminPanel({ loggedInUser }) {
               Criar Usuário
             </button>
           </form>
+          </div>
+
+          {/* Pending Requests Card */}
+          <div className="card" style={{ height: 'fit-content' }}>
+            <h2 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <UserCheck size={18} style={{ color: 'var(--color-primary)' }} /> Solicitações de Acesso
+            </h2>
+            {usersList.filter(u => u.is_pending).length === 0 ? (
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, textAlign: 'center', padding: '20px 0' }}>
+                Nenhuma solicitação aguardando aprovação.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {usersList.filter(u => u.is_pending).map(u => (
+                  <div key={u.username} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 600, fontSize: '14px' }}>@{u.username}</span>
+                      <span style={{ fontSize: '10px', background: 'rgba(245,158,11,0.15)', color: 'var(--color-warning)', padding: '2px 6px', borderRadius: '4px' }}>Pendente</span>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Vencimento (opcional)</label>
+                        <input 
+                          type="date"
+                          value={pendingExpirations[u.username] || ''}
+                          onChange={(e) => setPendingExpirations({ ...pendingExpirations, [u.username]: e.target.value })}
+                          style={{ padding: '6px 10px', fontSize: '12px', width: '100%', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                      <button 
+                        onClick={() => handleApprove(u.username)}
+                        className="btn btn-primary"
+                        style={{ flex: 1, padding: '6px', fontSize: '12px' }}
+                      >
+                        Aprovar
+                      </button>
+                      <button 
+                        onClick={() => handleReject(u.username)}
+                        className="btn btn-secondary"
+                        style={{ flex: 1, padding: '6px', fontSize: '12px', color: 'var(--color-danger)' }}
+                      >
+                        Recusar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* User Listing */}
@@ -248,6 +357,7 @@ export default function AdminPanel({ loggedInUser }) {
                     <th>Usuário</th>
                     <th>Tipo</th>
                     <th>Status</th>
+                    <th>Vencimento</th>
                     <th style={{ textAlign: 'center' }}>Ações</th>
                   </tr>
                 </thead>
@@ -264,6 +374,15 @@ export default function AdminPanel({ loggedInUser }) {
                         <span className={`badge ${user.is_active ? 'badge-income' : 'badge-danger'}`} style={{ fontSize: '10px', background: user.is_active ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)' }}>
                           {user.is_active ? 'Ativo' : 'Inativo'}
                         </span>
+                      </td>
+                      <td>
+                        <input 
+                          type="date"
+                          value={user.expiration_date || ''}
+                          onChange={(e) => handleUpdateExpiration(user.username, e.target.value)}
+                          style={{ padding: '4px 8px', fontSize: '11px', width: '130px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                          disabled={user.username === loggedInUser.username}
+                        />
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>

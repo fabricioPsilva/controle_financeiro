@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { Wallet, Key, User, ShieldAlert } from 'lucide-react';
-import { loginUser, registerUserPassword } from '../utils/storage';
+import { Wallet, Key, User, ShieldAlert, CheckCircle } from 'lucide-react';
+import { loginUser, registerUserPassword, registerSelfUser } from '../utils/storage';
 
 export default function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // First access state
-  const [isFirstAccess, setIsFirstAccess] = useState(false);
+  // View mode: 'login' | 'signup' | 'first_access'
+  const [viewMode, setViewMode] = useState('login');
+
+  // Forms state
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -19,6 +22,7 @@ export default function Login({ onLoginSuccess }) {
     
     setLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
     
     try {
       const res = await loginUser(username.trim(), password);
@@ -26,7 +30,7 @@ export default function Login({ onLoginSuccess }) {
       if (res.success) {
         onLoginSuccess(res.user);
       } else if (res.code === 'FIRST_ACCESS') {
-        setIsFirstAccess(true);
+        setViewMode('first_access');
       } else {
         setErrorMsg(res.message);
       }
@@ -55,13 +59,12 @@ export default function Login({ onLoginSuccess }) {
     try {
       const res = await registerUserPassword(username.trim(), newPassword);
       if (res.success) {
-        // Automatically log in
         const loginRes = await loginUser(username.trim(), newPassword);
         if (loginRes.success) {
           onLoginSuccess(loginRes.user);
         } else {
           setErrorMsg('Senha cadastrada. Por favor, faça login.');
-          setIsFirstAccess(false);
+          setViewMode('login');
           setPassword('');
         }
       } else {
@@ -70,6 +73,44 @@ export default function Login({ onLoginSuccess }) {
     } catch (err) {
       console.error(err);
       setErrorMsg('Erro ao cadastrar senha.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUpSubmit = async (e) => {
+    e.preventDefault();
+    const cleanUser = username.trim().toLowerCase();
+    if (!cleanUser) return;
+
+    if (!newPassword || newPassword.length < 4) {
+      setErrorMsg('A senha deve conter pelo menos 4 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setErrorMsg('As senhas não coincidem.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const res = await registerSelfUser(cleanUser, newPassword);
+      if (res.success) {
+        setSuccessMsg('Cadastro realizado com sucesso! Sua conta foi enviada e está aguardando aprovação do administrador.');
+        setViewMode('login');
+        setUsername(cleanUser);
+        setPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        setErrorMsg(res.message || 'Erro ao realizar o cadastro.');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Erro ao realizar o cadastro.');
     } finally {
       setLoading(false);
     }
@@ -113,7 +154,9 @@ export default function Login({ onLoginSuccess }) {
             Finanças Hub
           </h2>
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-            {isFirstAccess ? 'Defina sua senha de primeiro acesso' : 'Faça login para gerenciar suas contas'}
+            {viewMode === 'first_access' && 'Defina sua senha de primeiro acesso'}
+            {viewMode === 'login' && 'Faça login para gerenciar suas contas'}
+            {viewMode === 'signup' && 'Solicite acesso ao sistema criando sua conta'}
           </p>
         </div>
 
@@ -135,8 +178,26 @@ export default function Login({ onLoginSuccess }) {
           </div>
         )}
 
-        {/* Login Form */}
-        {!isFirstAccess ? (
+        {successMsg && (
+          <div style={{
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            color: 'var(--color-income)',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '13px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <CheckCircle size={16} style={{ flexShrink: 0 }} />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* Login View */}
+        {viewMode === 'login' && (
           <form onSubmit={handleLoginSubmit}>
             <div className="form-group">
               <label>Nome do Usuário</label>
@@ -180,9 +241,101 @@ export default function Login({ onLoginSuccess }) {
             >
               {loading ? 'Entrando...' : 'Entrar'}
             </button>
+
+            <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Não tem uma conta? </span>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setViewMode('signup');
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                }} 
+                style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+              >
+                Solicitar Acesso
+              </button>
+            </div>
           </form>
-        ) : (
-          /* First Access Setup Form */
+        )}
+
+        {/* Sign Up View */}
+        {viewMode === 'signup' && (
+          <form onSubmit={handleSignUpSubmit}>
+            <div style={{ display: 'flex', gap: '8px', background: 'rgba(99, 102, 241, 0.1)', border: '1px dashed rgba(99, 102, 241, 0.3)', padding: '12px', borderRadius: 'var(--radius-md)', marginBottom: '20px', fontSize: '13px', color: 'var(--text-primary)' }}>
+              <span>Insira seus dados para solicitar o cadastro. O acesso precisará ser validado pelo administrador.</span>
+            </div>
+
+            <div className="form-group">
+              <label>Nome do Usuário (login)</label>
+              <div style={{ position: 'relative' }}>
+                <User size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-muted)' }} />
+                <input 
+                  type="text" 
+                  value={username} 
+                  onChange={(e) => setUsername(e.target.value)} 
+                  placeholder="Ex: maria, joao" 
+                  style={{ paddingLeft: '38px' }}
+                  required
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Sua Senha</label>
+              <input 
+                type="password" 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)} 
+                placeholder="Mínimo 4 caracteres"
+                required
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Confirmar Senha</label>
+              <input 
+                type="password" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                placeholder="Repita a senha"
+                required
+                disabled={loading}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                style={{ flex: 1 }}
+                onClick={() => {
+                  setViewMode('login');
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                }}
+                disabled={loading}
+              >
+                Voltar
+              </button>
+              <button 
+                type="submit" 
+                className="btn btn-primary" 
+                style={{ flex: 2 }}
+                disabled={loading}
+              >
+                {loading ? 'Cadastrando...' : 'Cadastrar'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* First Access View */}
+        {viewMode === 'first_access' && (
           <form onSubmit={handleFirstAccessSubmit}>
             <div style={{ display: 'flex', gap: '8px', background: 'rgba(99, 102, 241, 0.1)', border: '1px dashed rgba(99, 102, 241, 0.3)', padding: '12px', borderRadius: 'var(--radius-md)', marginBottom: '20px', fontSize: '13px', color: 'var(--text-primary)' }}>
               <span>Olá <strong>{username}</strong>! Este é seu primeiro login. Por favor, crie uma senha para proteger seus dados.</span>
@@ -218,7 +371,7 @@ export default function Login({ onLoginSuccess }) {
                 className="btn btn-secondary" 
                 style={{ flex: 1 }}
                 onClick={() => {
-                  setIsFirstAccess(false);
+                  setViewMode('login');
                   setErrorMsg('');
                 }}
                 disabled={loading}
