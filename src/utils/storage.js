@@ -8,7 +8,7 @@ const DEFAULT_BUDGET_CONFIG = [
   { id: 'savings', label: 'Poupança / Reserva', target: 20, matchType: 'type', matchValue: 'savings' }
 ];
 
-// Helper to hash passwords simply (client-side SHA-256 equivalent or simple obfuscation for security)
+// Helper to hash passwords simply
 const hashPassword = async (password) => {
   const msgUint8 = new TextEncoder().encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
@@ -20,12 +20,14 @@ const hashPassword = async (password) => {
 const getLocalUsers = () => {
   const users = localStorage.getItem('fin_users');
   if (!users) {
-    // Seed default admin with no password
-    const defaultUsers = [{ username: 'admin', password_hash: null, is_admin: true }];
+    const defaultUsers = [{ username: 'admin', password_hash: null, is_admin: true, is_active: true }];
     localStorage.setItem('fin_users', JSON.stringify(defaultUsers));
     return defaultUsers;
   }
-  return JSON.parse(users);
+  
+  const parsed = JSON.parse(users);
+  // Guarantee is_active attribute exists on fallback
+  return parsed.map(u => ({ ...u, is_active: u.is_active !== undefined ? u.is_active : true }));
 };
 
 const saveLocalUsers = (users) => {
@@ -43,6 +45,7 @@ export const loginUser = async (username, password) => {
     const localUsers = getLocalUsers();
     const user = localUsers.find(u => u.username === normUser);
     if (!user) return { success: false, message: 'Usuário não cadastrado.' };
+    if (!user.is_active) return { success: false, message: 'Esta conta está inativa. Entre em contato com o administrador.' };
     
     if (user.password_hash === null) {
       return { success: false, code: 'FIRST_ACCESS', user };
@@ -64,6 +67,7 @@ export const loginUser = async (username, password) => {
 
     if (error) throw error;
     if (!data) return { success: false, message: 'Usuário não cadastrado.' };
+    if (!data.is_active) return { success: false, message: 'Esta conta está inativa. Entre em contato com o administrador.' };
 
     if (data.password_hash === null) {
       return { success: false, code: 'FIRST_ACCESS', user: data };
@@ -122,7 +126,8 @@ export const listAllUsers = async () => {
       .order('username', { ascending: true });
     
     if (error) throw error;
-    return data;
+    // Map missing is_active safely
+    return data.map(u => ({ ...u, is_active: u.is_active !== undefined ? u.is_active : true }));
   } catch (err) {
     console.error('Error listing users:', err);
     return getLocalUsers();
@@ -137,7 +142,7 @@ export const createNewUser = async (username, isAdmin = false) => {
     if (localUsers.some(u => u.username === normUser)) {
       return { success: false, message: 'Usuário já existe.' };
     }
-    const updated = [...localUsers, { username: normUser, password_hash: null, is_admin: isAdmin }];
+    const updated = [...localUsers, { username: normUser, password_hash: null, is_admin: isAdmin, is_active: true }];
     saveLocalUsers(updated);
     return { success: true };
   }
@@ -145,13 +150,42 @@ export const createNewUser = async (username, isAdmin = false) => {
   try {
     const { error } = await supabase
       .from('users')
-      .insert({ username: normUser, password_hash: null, is_admin: isAdmin });
+      .insert({ username: normUser, password_hash: null, is_admin: isAdmin, is_active: true });
 
     if (error) throw error;
     return { success: true };
   } catch (err) {
     console.error('Error creating user:', err);
     return { success: false, message: 'Erro ao cadastrar usuário no banco.' };
+  }
+};
+
+export const toggleUserStatus = async (username, isActive) => {
+  const normUser = username.trim().toLowerCase();
+
+  if (!isSupabaseConfigured) {
+    const localUsers = getLocalUsers();
+    const updated = localUsers.map(u => {
+      if (u.username === normUser) {
+        return { ...u, is_active: isActive };
+      }
+      return u;
+    });
+    saveLocalUsers(updated);
+    return { success: true };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ is_active: isActive })
+      .eq('username', normUser);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error('Error toggling user status:', err);
+    return { success: false, message: 'Erro ao alterar status do usuário no banco.' };
   }
 };
 
@@ -196,14 +230,12 @@ export const deleteUserAccount = async (username) => {
   }
 
   try {
-    // Delete authentication record
     const { error: userError } = await supabase
       .from('users')
       .delete()
       .eq('username', normUser);
     if (userError) throw userError;
 
-    // Delete associated data record
     const { error: dataError } = await supabase
       .from('profiles_data')
       .delete()
@@ -222,13 +254,12 @@ export const deleteUserAccount = async (username) => {
 // ----------------------------------------------------
 
 export const getProfiles = async () => {
-  // Profiles list is derived from the users list
   const users = await listAllUsers();
   return users.map(u => u.username);
 };
 
 export const saveProfiles = async (profiles) => {
-  // Handled dynamically by creating new users via the AdminPanel
+  // Handled dynamically
 };
 
 export const getActiveProfile = () => {

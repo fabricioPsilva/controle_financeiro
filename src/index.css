@@ -468,3 +468,44 @@ tr:hover td {
   align-items: center;
   margin-bottom: 20px;
 }
+
+/* Responsive adjustments for mobile devices */
+@media (max-width: 768px) {
+  .grid-4, .grid-3, .grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  
+  .header {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 16px;
+  }
+  
+  .logo-section {
+    justify-content: center;
+  }
+
+  .nav-tabs {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .nav-tab {
+    flex: 1 1 45%;
+    justify-content: center;
+    font-size: 13px;
+    padding: 10px;
+  }
+  
+  .desktop-table {
+    display: none !important;
+  }
+  
+  .mobile-cards-list {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+  }
+}

@@ -605,197 +605,302 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
             Nenhuma transação encontrada para este mês.
           </div>
         ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Descrição</th>
-                  <th>Tipo / Categoria</th>
-                  <th>Pagamento</th>
-                  <th>Tags</th>
-                  <th style={{ textAlign: 'right' }}>Valor</th>
-                  <th style={{ textAlign: 'center' }}>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayItems.map(item => {
-                  if (item.isGroup) {
-                    const isExpanded = expandedCardIds.includes(item.cardId);
-                    
-                    return (
-                      <React.Fragment key={item.id}>
-                        <tr style={{ background: 'rgba(99, 102, 241, 0.04)', borderLeft: '3px solid var(--color-primary)' }}>
+          <>
+            {/* Desktop Table View */}
+            <div className="table-wrapper desktop-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Tipo / Categoria</th>
+                    <th>Pagamento</th>
+                    <th>Tags</th>
+                    <th style={{ textAlign: 'right' }}>Valor</th>
+                    <th style={{ textAlign: 'center' }}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayItems.map(item => {
+                    if (item.isGroup) {
+                      const isExpanded = expandedCardIds.includes(item.cardId);
+                      
+                      return (
+                        <React.Fragment key={item.id}>
+                          <tr style={{ background: 'rgba(99, 102, 241, 0.04)', borderLeft: '3px solid var(--color-primary)' }}>
+                            <td>{item.date.split('-').reverse().join('/')}</td>
+                            <td>
+                              <div style={{ fontWeight: 600, color: 'var(--color-primary)' }}>
+                                Fatura: {item.cardName}
+                              </div>
+                            </td>
+                            <td>
+                              <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-primary)' }}>
+                                Cartão
+                              </span>
+                            </td>
+                            <td>💳 Consolidated</td>
+                            <td>
+                              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                {item.items.length} gastos
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-expense)' }}>
+                              - R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                <button 
+                                  onClick={() => toggleCardExpand(item.cardId)} 
+                                  className="btn btn-secondary" 
+                                  style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                  {isExpanded ? 'Ocultar' : 'Ver Detalhes'}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+
+                          {isExpanded && item.items.map(subItem => {
+                            return (
+                              <tr key={subItem.id} style={{ background: 'rgba(255, 255, 255, 0.01)', borderLeft: '3px solid rgba(99, 102, 241, 0.2)' }}>
+                                <td style={{ paddingLeft: '24px', fontSize: '13px', opacity: 0.8 }}>
+                                  {subItem.date.split('-').reverse().join('/')}
+                                </td>
+                                <td style={{ fontSize: '13px', opacity: 0.9 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {subItem.description}
+                                    {subItem.recurrenceType === 'installment_item' && (
+                                      <span style={{ fontSize: '9px', background: 'rgba(244, 63, 94, 0.15)', color: 'var(--color-variable)', padding: '1px 4px', borderRadius: '3px' }}>
+                                        Parc.
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td style={{ fontSize: '13px' }}>
+                                  <span className={`badge badge-${subItem.type}`} style={{ fontSize: '9px', padding: '2px 6px', marginRight: '4px' }}>
+                                    {subItem.type === 'essential' ? 'Essencial' : 'Variável'}
+                                  </span>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{subItem.category}</span>
+                                </td>
+                                <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                  💳 Item
+                                </td>
+                                <td>
+                                  <div className="tag-container">
+                                    {subItem.tags.filter(tag => tag !== 'cartao').map(tag => (
+                                      <span key={tag} className="tag-item" style={{ fontSize: '9px' }}>{tag}</span>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-expense)', fontSize: '13px' }}>
+                                  - R$ {subItem.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td>
+                                  <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                    <button 
+                                      onClick={() => handleEditClick(subItem)} 
+                                      className="btn btn-secondary" 
+                                      style={{ padding: '4px', color: 'var(--color-primary)' }}
+                                      title="Editar Item"
+                                    >
+                                      <Edit2 size={12} />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDelete(subItem)} 
+                                      className="btn btn-secondary" 
+                                      style={{ padding: '4px', color: 'var(--color-danger)' }}
+                                      title="Excluir Item"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                    } else {
+                      const isIncome = item.type === 'income';
+                      const card = creditCards.find(c => c.id === item.cardId);
+
+                      return (
+                        <tr key={item.id}>
                           <td>{item.date.split('-').reverse().join('/')}</td>
                           <td>
-                            <div style={{ fontWeight: 600, color: 'var(--color-primary)' }}>
-                              Fatura: {item.cardName}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {item.description}
+                              {item.recurrenceType === 'fixed' && (
+                                <span style={{ fontSize: '9px', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-primary)', padding: '1px 4px', borderRadius: '3px' }}>
+                                  Fixo
+                                </span>
+                              )}
+                              {item.recurrenceType === 'installment_item' && (
+                                <span style={{ fontSize: '9px', background: 'rgba(244, 63, 94, 0.15)', color: 'var(--color-variable)', padding: '1px 4px', borderRadius: '3px' }}>
+                                  Parc.
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td>
-                            <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-primary)' }}>
-                              Cartão
+                            <span className={`badge badge-${item.type}`} style={{ marginRight: '6px' }}>
+                              {item.type === 'income' ? 'Receita' : item.type === 'essential' ? 'Essencial' : 'Variável'}
                             </span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{item.category}</span>
                           </td>
-                          <td>💳 Consolidated</td>
                           <td>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                              {item.items.length} gastos
+                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                              {card ? `💳 ${card.name} (Fat. ${getInvoiceMonth(item.date, card.closingDay).split('-').reverse().join('/')})` : '💵 Dinheiro/PIX'}
                             </span>
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-expense)' }}>
-                            - R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          <td>
+                            <div className="tag-container">
+                              {item.tags.map(tag => (
+                                <span key={tag} className="tag-item">{tag}</span>
+                              ))}
+                            </div>
+                          </td>
+                          <td style={{ 
+                            textAlign: 'right', 
+                            fontWeight: 600, 
+                            color: isIncome ? 'var(--color-income)' : 'var(--color-expense)' 
+                          }}>
+                            {isIncome ? '+' : '-'} R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                               <button 
-                                onClick={() => toggleCardExpand(item.cardId)} 
+                                onClick={() => handleEditClick(item)} 
                                 className="btn btn-secondary" 
-                                style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                style={{ padding: '6px', color: 'var(--color-primary)' }}
+                                title="Editar Transação"
                               >
-                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                {isExpanded ? 'Ocultar' : 'Ver Detalhes'}
+                                <Edit2 size={14} />
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(item)} 
+                                className="btn btn-secondary" 
+                                style={{ padding: '6px', color: 'var(--color-danger)' }}
+                                title="Excluir Transação"
+                              >
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </td>
                         </tr>
+                      );
+                    }
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                        {isExpanded && item.items.map(subItem => {
-                          return (
-                            <tr key={subItem.id} style={{ background: 'rgba(255, 255, 255, 0.01)', borderLeft: '3px solid rgba(99, 102, 241, 0.2)' }}>
-                              <td style={{ paddingLeft: '24px', fontSize: '13px', opacity: 0.8 }}>
-                                {subItem.date.split('-').reverse().join('/')}
-                              </td>
-                              <td style={{ fontSize: '13px', opacity: 0.9 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  {subItem.description}
-                                  {subItem.recurrenceType === 'installment_item' && (
-                                    <span style={{ fontSize: '9px', background: 'rgba(244, 63, 94, 0.15)', color: 'var(--color-variable)', padding: '1px 4px', borderRadius: '3px' }}>
-                                      Parc.
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td style={{ fontSize: '13px' }}>
-                                <span className={`badge badge-${subItem.type}`} style={{ fontSize: '9px', padding: '2px 6px', marginRight: '4px' }}>
-                                  {subItem.type === 'essential' ? 'Essencial' : 'Variável'}
-                                </span>
-                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{subItem.category}</span>
-                              </td>
-                              <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                💳 Item
-                              </td>
-                              <td>
-                                <div className="tag-container">
-                                  {subItem.tags.filter(tag => tag !== 'cartao').map(tag => (
-                                    <span key={tag} className="tag-item" style={{ fontSize: '9px' }}>{tag}</span>
-                                  ))}
-                                </div>
-                              </td>
-                              <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--color-expense)', fontSize: '13px' }}>
-                                - R$ {subItem.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </td>
-                              <td>
-                                <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                                  <button 
-                                    onClick={() => handleEditClick(subItem)} 
-                                    className="btn btn-secondary" 
-                                    style={{ padding: '4px', color: 'var(--color-primary)' }}
-                                    title="Editar Item"
-                                  >
-                                    <Edit2 size={12} />
-                                  </button>
-                                  <button 
-                                    onClick={() => handleDelete(subItem)} 
-                                    className="btn btn-secondary" 
-                                    style={{ padding: '4px', color: 'var(--color-danger)' }}
-                                    title="Excluir Item"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </React.Fragment>
-                    );
-                  } else {
-                    const isIncome = item.type === 'income';
-                    const card = creditCards.find(c => c.id === item.cardId);
-                    
-                    return (
-                      <tr key={item.id} style={{ borderColor: editingId === item.id ? 'var(--color-primary)' : 'var(--border-color)' }}>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          {item.date.split('-').reverse().join('/')}
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {item.description}
-                            {item.recurrenceType === 'fixed' && (
-                              <span style={{ fontSize: '10px', background: 'rgba(99, 102, 241, 0.2)', color: 'var(--color-primary)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                                Fixo
-                              </span>
-                            )}
-                            {item.recurrenceType === 'installment_item' && (
-                              <span style={{ fontSize: '10px', background: 'rgba(244, 63, 94, 0.15)', color: 'var(--color-variable)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                                Parc.
-                              </span>
-                            )}
+            {/* Mobile Cards View */}
+            <div className="mobile-cards-list" style={{ display: 'none' }}>
+              {displayItems.map(item => {
+                if (item.isGroup) {
+                  const isExpanded = expandedCardIds.includes(item.cardId);
+                  return (
+                    <div key={item.id} className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <span style={{ fontWeight: 600, fontSize: '15px' }}>Fatura: {item.cardName}</span>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.items.length} compras no cartão</div>
+                        </div>
+                        <span style={{ fontWeight: 700, color: 'var(--color-expense)', fontSize: '15px' }}>
+                          - R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => toggleCardExpand(item.cardId)} 
+                        className="btn btn-secondary" 
+                        style={{ width: '100%', padding: '6px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                      >
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        {isExpanded ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+                      </button>
+                      {isExpanded && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', marginTop: '4px' }}>
+                          {item.items.map(sub => (
+                            <div key={sub.id} style={{ fontSize: '13px', background: 'rgba(255,255,255,0.01)', padding: '8px', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <div style={{ fontWeight: 500 }}>{sub.description}</div>
+                                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{sub.date.split('-').reverse().join('/')} | {sub.category}</div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontWeight: 600, color: 'var(--color-expense)' }}>- R$ {sub.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                <button onClick={() => handleEditClick(sub)} className="btn btn-secondary" style={{ padding: '4px', color: 'var(--color-primary)' }}><Edit2 size={12} /></button>
+                                <button onClick={() => handleDelete(sub)} className="btn btn-secondary" style={{ padding: '4px', color: 'var(--color-danger)' }}><Trash2 size={12} /></button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                } else {
+                  const isIncome = item.type === 'income';
+                  const card = creditCards.find(c => c.id === item.cardId);
+                  return (
+                    <div key={item.id} className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                        <div>
+                          <span style={{ fontWeight: 600, fontSize: '15px' }}>{item.description}</span>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {item.date.split('-').reverse().join('/')}
                           </div>
-                        </td>
-                        <td>
-                          <span className={`badge badge-${item.type}`} style={{ marginRight: '6px' }}>
-                            {item.type === 'income' ? 'Receita' : item.type === 'essential' ? 'Essencial' : 'Variável'}
-                          </span>
-                          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{item.category}</span>
-                        </td>
-                        <td>
-                          <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                            {card ? `💳 ${card.name} (Fat. ${getInvoiceMonth(item.date, card.closingDay).split('-').reverse().join('/')})` : '💵 Dinheiro/PIX'}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="tag-container">
-                            {item.tags.map(tag => (
-                              <span key={tag} className="tag-item">{tag}</span>
-                            ))}
-                          </div>
-                        </td>
-                        <td style={{ 
-                          textAlign: 'right', 
-                          fontWeight: 600, 
+                        </div>
+                        <span style={{ 
+                          fontWeight: 700, 
+                          fontSize: '16px',
                           color: isIncome ? 'var(--color-income)' : 'var(--color-expense)' 
                         }}>
                           {isIncome ? '+' : '-'} R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                            <button 
-                              onClick={() => handleEditClick(item)} 
-                              className="btn btn-secondary" 
-                              style={{ padding: '6px', color: 'var(--color-primary)' }}
-                              title="Editar Transação"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button 
-                              onClick={() => handleDelete(item)} 
-                              className="btn btn-secondary" 
-                              style={{ padding: '6px', color: 'var(--color-danger)' }}
-                              title="Excluir Transação"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  }
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', fontSize: '12px' }}>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <span className={`badge badge-${item.type}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {item.type === 'income' ? 'Receita' : item.type === 'essential' ? 'Essencial' : 'Variável'}
+                          </span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{item.category}</span>
+                        </div>
+                        <span style={{ color: 'var(--text-muted)' }}>
+                          {card ? `💳 ${card.name}` : '💵 Dinheiro/PIX'}
+                        </span>
+                      </div>
+
+                      {item.tags.length > 0 && (
+                        <div className="tag-container" style={{ margin: 0, gap: '4px' }}>
+                          {item.tags.map(t => <span key={t} className="tag-item" style={{ fontSize: '9px', padding: '1px 6px' }}>{t}</span>)}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '10px', marginTop: '4px' }}>
+                        <button 
+                          onClick={() => handleEditClick(item)} 
+                          className="btn btn-secondary" 
+                          style={{ flex: 1, padding: '6px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: 'var(--color-primary)' }}
+                        >
+                          <Edit2 size={12} /> Editar
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(item)} 
+                          className="btn btn-secondary" 
+                          style={{ flex: 1, padding: '6px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: 'var(--color-danger)' }}
+                        >
+                          <Trash2 size={12} /> Excluir
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+              })}
+            </div>
+          </>
         )}
       </div>
 

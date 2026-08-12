@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Trash2, RotateCcw, ShieldCheck, Users, RefreshCw } from 'lucide-react';
-import { listAllUsers, createNewUser, resetUserPassword, deleteUserAccount } from '../utils/storage';
+import { UserPlus, Trash2, RotateCcw, ShieldCheck, Users, RefreshCw, UserCheck, UserX } from 'lucide-react';
+import { listAllUsers, createNewUser, resetUserPassword, deleteUserAccount, toggleUserStatus } from '../utils/storage';
 
 export default function AdminPanel({ loggedInUser }) {
   const [usersList, setUsersList] = useState([]);
@@ -49,6 +49,35 @@ export default function AdminPanel({ loggedInUser }) {
     } catch (err) {
       console.error(err);
       setErrorMsg('Erro de conexão ao criar usuário.');
+    }
+  };
+
+  const handleToggleStatus = async (username, currentStatus) => {
+    if (username === loggedInUser.username) {
+      alert('Você não pode inativar o seu próprio usuário administrador.');
+      return;
+    }
+
+    const nextStatus = !currentStatus;
+    const msg = nextStatus 
+      ? `Deseja reativar o acesso do usuário "${username}"?` 
+      : `Deseja inativar o acesso do usuário "${username}"? Todos os dados financeiros dele serão preservados na nuvem.`;
+
+    if (confirm(msg)) {
+      setActionMessage('');
+      setErrorMsg('');
+      try {
+        const res = await toggleUserStatus(username, nextStatus);
+        if (res.success) {
+          setActionMessage(`O status do usuário "${username}" foi alterado para ${nextStatus ? 'Ativo' : 'Inativo'}.`);
+          fetchUsers();
+        } else {
+          setErrorMsg(res.message || 'Erro ao alternar status do usuário.');
+        }
+      } catch (err) {
+        console.error(err);
+        setErrorMsg('Erro de conexão ao alterar status.');
+      }
     }
   };
 
@@ -170,13 +199,13 @@ export default function AdminPanel({ loggedInUser }) {
                   <tr>
                     <th>Usuário</th>
                     <th>Tipo</th>
-                    <th>Senha</th>
+                    <th>Status</th>
                     <th style={{ textAlign: 'center' }}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {usersList.map((user) => (
-                    <tr key={user.username}>
+                    <tr key={user.username} style={{ opacity: user.is_active ? 1 : 0.6 }}>
                       <td style={{ fontWeight: 600 }}>{user.username}</td>
                       <td>
                         <span className={`badge ${user.is_admin ? 'badge-essential' : 'badge-variable'}`} style={{ fontSize: '10px' }}>
@@ -184,12 +213,21 @@ export default function AdminPanel({ loggedInUser }) {
                         </span>
                       </td>
                       <td>
-                        <span style={{ fontSize: '11px', color: user.password_hash ? 'var(--color-success)' : 'var(--color-warning)' }}>
-                          {user.password_hash ? 'Cadastrada' : 'Pendente (1º Acesso)'}
+                        <span className={`badge ${user.is_active ? 'badge-income' : 'badge-danger'}`} style={{ fontSize: '10px', background: user.is_active ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)' }}>
+                          {user.is_active ? 'Ativo' : 'Inativo'}
                         </span>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                          <button 
+                            onClick={() => handleToggleStatus(user.username, user.is_active)}
+                            className="btn btn-secondary"
+                            style={{ padding: '6px', color: user.is_active ? 'var(--color-danger)' : 'var(--color-income)' }}
+                            title={user.is_active ? 'Inativar Usuário' : 'Ativar Usuário'}
+                            disabled={user.username === loggedInUser.username}
+                          >
+                            {user.is_active ? <UserX size={13} /> : <UserCheck size={13} />}
+                          </button>
                           <button 
                             onClick={() => handleResetPassword(user.username)}
                             className="btn btn-secondary"

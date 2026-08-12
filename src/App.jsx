@@ -9,7 +9,9 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Settings
+  Settings,
+  HelpCircle,
+  X
 } from 'lucide-react';
 import { 
   getActiveProfile, 
@@ -36,6 +38,7 @@ function App() {
   });
   const [editingTransactionId, setEditingTransactionId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   // Load active profile and its data on start/user login
   useEffect(() => {
@@ -186,7 +189,15 @@ function App() {
         </div>
 
         {/* User profile / Logout badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button 
+            onClick={() => setShowHelpModal(true)} 
+            className="btn btn-secondary" 
+            style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+            title="Ver Manual de Uso"
+          >
+            <HelpCircle size={13} /> Manual
+          </button>
           <div className="profile-badge" style={{ cursor: 'default' }}>
             <User size={14} />
             <span>
@@ -271,6 +282,89 @@ function App() {
           />
         )}
       </main>
+
+      {showHelpModal && (
+        <div className="modal-overlay" onClick={() => setShowHelpModal(false)}>
+          <div className="modal-content" style={{ maxWidth: '650px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '14px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <HelpCircle size={20} style={{ color: 'var(--color-primary)' }} />
+                <h3 style={{ fontSize: '18px', fontWeight: 600 }}>Manual de Uso & Funcionalidades</h3>
+              </div>
+              <button onClick={() => setShowHelpModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', paddingRight: '6px', fontSize: '14px', lineHeight: '1.6', color: 'var(--text-primary)' }}>
+              
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>1. Acesso e Segurança (Login)</h4>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  A aplicação é protegida por senha. Cada usuário cadastrado possui seu próprio banco de dados isolado na nuvem. O usuário administrador padrão é <strong>admin</strong>.
+                </p>
+              </div>
+
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>2. Painel Administrativo (Exclusivo Admin)</h4>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  Usuários administradores visualizam o menu <strong>Administração</strong> no menu inferior. Lá é possível:
+                </p>
+                <ul style={{ paddingLeft: '20px', marginTop: '6px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <li>Cadastrar novos logins/nomes de usuário (como membros da família).</li>
+                  <li>Inativar/Ativar contas (bloqueia o acesso sem excluir os dados históricos da nuvem).</li>
+                  <li>Resetar senhas (limpa a senha atual, forçando o usuário a redefini-la no próximo acesso).</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>3. Primeiro Acesso de Novos Perfis</h4>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  Contas recém-criadas pelo administrador começam sem senha. No primeiro acesso, o usuário digita seu nome na tela de login, deixa a senha em branco e o sistema solicitará o cadastro de uma nova senha pessoal de segurança.
+                </p>
+              </div>
+
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>4. Lançamento de Transações</h4>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  Na aba <strong>Lançamentos</strong>, você cadastra suas receitas e despesas. As despesas são classificadas em:
+                </p>
+                <ul style={{ paddingLeft: '20px', marginTop: '6px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <li><strong>Essenciais</strong>: Despesas fixas obrigatórias (Aluguel, Contas, Saúde). Target ideal: 50% da receita.</li>
+                  <li><strong>Variáveis</strong>: Lazer, restaurante, compras supérfluas. Target ideal: 30% da receita.</li>
+                  <li><strong>Poupança/Reserva</strong>: Dinheiro guardado ou investido. Target ideal: 20% da receita.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>5. Controle de Cartões de Crédito</h4>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  Na aba <strong>Cartões</strong>, cadastre seus cartões e limites.
+                </p>
+                <ul style={{ paddingLeft: '20px', marginTop: '6px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <li><strong>Cálculo por Fechamento</strong>: Lançar gastos no cartão calcula automaticamente se a despesa entra na fatura deste mês ou rola para o mês seguinte (caso o dia do gasto seja após o dia de fechamento do cartão).</li>
+                  <li><strong>Parcelamento</strong>: Lance o valor total da compra e a quantidade de parcelas. O sistema distribui as parcelas nos meses seguintes de forma inteligente, nomeando-as como <i>"Parcela X/N - Total R$"</i>.</li>
+                  <li><strong>Ver Extrato</strong>: Clique em <i>"Ver Fatura"</i> para abrir um extrato de cartão detalhado da competência escolhida.</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>6. Dashboard de Metas</h4>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  A aba <strong>Painel</strong> mostra seus KPIs e a aderência das suas despesas às metas do orçamento. Ele acusa em tempo real (verde ou vermelho) se a porcentagem programada está sendo respeitada.
+                </p>
+              </div>
+
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', marginTop: '16px', paddingTop: '16px' }}>
+              <button onClick={() => setShowHelpModal(false)} className="btn btn-primary" style={{ padding: '8px 20px' }}>
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
