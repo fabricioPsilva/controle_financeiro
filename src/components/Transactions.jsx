@@ -30,11 +30,11 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
   // Expanded Cards State (for consolidated view)
   const [expandedCardIds, setExpandedCardIds] = useState([]);
 
-  // Filter State
   const [filterType, setFilterType] = useState('all');
   const [filterCard, setFilterCard] = useState('all');
   const [filterTag, setFilterTag] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showForm, setShowForm] = useState(() => window.innerWidth > 768);
 
   const getCategoriesByType = (t) => {
     if (t === 'income') return ['Salário', 'Investimentos', 'Extras', 'Outros'];
@@ -251,6 +251,10 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
     setTagsInput('');
     setSelectedCardId('');
     setRecurrenceType('single');
+
+    if (window.innerWidth <= 768) {
+      setShowForm(false);
+    }
   };
 
   const handleEditClick = (t) => {
@@ -281,6 +285,7 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
     setTagsInput(t.tags.filter(tag => tag !== 'fixo' && tag !== 'parcelado' && tag !== 'cartao').join(', '));
     setSelectedCardId(t.cardId || '');
     
+    setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -293,6 +298,9 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
     setSelectedCardId('');
     setRecurrenceType('single');
     setDate(`${selectedMonth}-01`);
+    if (window.innerWidth <= 768) {
+      setShowForm(false);
+    }
   };
 
   const handleDelete = (t) => {
@@ -422,12 +430,35 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
     <div className="grid" style={{ gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
       
       {/* Transaction Input Form */}
-      <div className="card" style={{ height: 'fit-content' }}>
-        <h2 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {editingId ? <Edit2 size={18} style={{ color: 'var(--color-primary)' }} /> : <Plus size={18} />} 
-          {editingId ? 'Editar Lançamento' : 'Lançar Movimentação'}
-        </h2>
-        <form onSubmit={handleSubmit}>
+      <div className="card" style={{ height: 'fit-content', display: 'flex', flexDirection: 'column' }}>
+        <div 
+          onClick={() => setShowForm(!showForm)} 
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            cursor: 'pointer',
+            paddingBottom: showForm ? '12px' : '0',
+            borderBottom: showForm ? '1px dashed var(--border-color)' : 'none',
+            marginBottom: showForm ? '16px' : '0'
+          }}
+        >
+          <h2 style={{ fontSize: '18px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            {editingId ? <Edit2 size={18} style={{ color: 'var(--color-primary)' }} /> : <Plus size={18} />} 
+            {editingId ? 'Editar Lançamento' : 'Lançar Movimentação'}
+          </h2>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid var(--border-color)' }}
+          >
+            {showForm ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {showForm ? 'Recolher' : 'Expandir'}
+          </button>
+        </div>
+
+        {showForm && (
+          <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Tipo de Transação</label>
             <select value={type} onChange={handleTypeChange}>
@@ -539,7 +570,8 @@ export default function Transactions({ profileData, onUpdateProfileData, selecte
               {editingId ? 'Salvar Alterações' : 'Salvar Transação'}
             </button>
           </div>
-        </form>
+          </form>
+        )}
       </div>
 
       {/* Transaction List and Filters */}
