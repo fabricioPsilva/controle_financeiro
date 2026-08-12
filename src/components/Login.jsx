@@ -207,7 +207,7 @@ export default function Login({ onLoginSuccess }) {
                   type="text" 
                   value={username} 
                   onChange={(e) => setUsername(e.target.value)} 
-                  placeholder="Ex: admin, fabricio" 
+                  placeholder="Usuário" 
                   style={{ paddingLeft: '38px' }}
                   required
                   disabled={loading}
@@ -223,7 +223,7 @@ export default function Login({ onLoginSuccess }) {
                   type="password" 
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 
-                  placeholder="Sua senha" 
+                  placeholder="Senha" 
                   style={{ paddingLeft: '38px' }}
                   disabled={loading}
                 />
@@ -276,7 +276,7 @@ export default function Login({ onLoginSuccess }) {
                   type="text" 
                   value={username} 
                   onChange={(e) => setUsername(e.target.value)} 
-                  placeholder="Ex: maria, joao" 
+                  placeholder="Usuário" 
                   style={{ paddingLeft: '38px' }}
                   required
                   disabled={loading}
