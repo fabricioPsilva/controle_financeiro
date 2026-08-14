@@ -134,8 +134,8 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Header section */}
-      <header className="header" style={{ flexWrap: 'wrap', gap: '16px' }}>
+      {/* Header section (Desktop) */}
+      <header className="header header-desktop" style={{ flexWrap: 'wrap', gap: '16px' }}>
         <div className="logo-section">
           <div style={{ 
             width: '40px', 
@@ -223,6 +223,55 @@ function App() {
             style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--color-danger)' }}
           >
             <LogOut size={13} /> Sair
+          </button>
+        </div>
+      </header>
+
+      {/* Header section (Mobile) */}
+      <header className="header-mobile">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="mobile-avatar" style={{ 
+            width: '32px', 
+            height: '32px', 
+            borderRadius: 'var(--radius-full)', 
+            background: 'var(--color-primary)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            color: '#fff', 
+            fontWeight: 700, 
+            fontSize: '12px',
+            boxShadow: '0 2px 8px rgba(99, 102, 241, 0.4)'
+          }}>
+            {user.username.substring(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>Olá,</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{user.username}</div>
+          </div>
+        </div>
+        
+        {/* Month Navigation for mobile */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: 'var(--radius-full)', border: '1px solid var(--border-color)' }}>
+          <button onClick={handlePrevMonth} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}><ChevronLeft size={14} /></button>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            {selectedMonth.split('-').reverse().join('/')}
+          </span>
+          <button onClick={handleNextMonth} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}><ChevronRight size={14} /></button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <button onClick={() => setShowHelpModal(true)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', padding: '6px', display: 'flex', alignItems: 'center' }} title="Manual"><HelpCircle size={15} /></button>
+          <button 
+            onClick={() => {
+              sessionStorage.removeItem('fin_logged_in_user');
+              setUser(null);
+              setProfileData(null);
+            }} 
+            style={{ background: 'none', border: 'none', color: 'var(--color-danger)', padding: '6px', display: 'flex', alignItems: 'center' }}
+            title="Sair"
+          >
+            <LogOut size={15} />
           </button>
         </div>
       </header>
