@@ -15,7 +15,7 @@ export default function Login({ onLoginSuccess }) {
   // Biometric login states
   const [showBiometricRegisterPrompt, setShowBiometricRegisterPrompt] = useState(false);
   const [tempUserForBiometrics, setTempUserForBiometrics] = useState(null);
-  const isBiometricSupported = !!window.PublicKeyCredential;
+  const isBiometricSupported = !!window.PublicKeyCredential && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   // Forms state
   const [newPassword, setNewPassword] = useState('');
