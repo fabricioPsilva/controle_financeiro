@@ -3,7 +3,7 @@ import { Wallet, Key, User, ShieldAlert, CheckCircle, Fingerprint } from 'lucide
 import { loginUser, registerUserPassword, registerSelfUser, loginUserWithBiometrics } from '../utils/storage';
 
 export default function Login({ onLoginSuccess }) {
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(() => localStorage.getItem('fin_last_username') || '');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -46,6 +46,7 @@ export default function Login({ onLoginSuccess }) {
       const res = await loginUser(username.trim(), password);
       
       if (res.success) {
+        localStorage.setItem('fin_last_username', res.user.username);
         if (isBiometricSupported && localStorage.getItem('fin_bio_reg_' + res.user.username) !== 'true') {
           setTempUserForBiometrics(res.user);
           setShowBiometricRegisterPrompt(true);
@@ -95,6 +96,7 @@ export default function Login({ onLoginSuccess }) {
       if (credential) {
         localStorage.setItem('fin_bio_reg_' + tempUserForBiometrics.username, 'true');
         localStorage.setItem('fin_bio_cred_id_' + tempUserForBiometrics.username, btoa(String.fromCharCode(...new Uint8Array(credential.rawId))));
+        localStorage.setItem('fin_last_username', tempUserForBiometrics.username);
         setSuccessMsg('Biometria ativada com sucesso para este aparelho!');
         setTimeout(() => {
           onLoginSuccess(tempUserForBiometrics);
@@ -149,6 +151,7 @@ export default function Login({ onLoginSuccess }) {
       if (assertion) {
         const res = await loginUserWithBiometrics(cleanUser);
         if (res.success) {
+          localStorage.setItem('fin_last_username', res.user.username);
           onLoginSuccess(res.user);
         } else {
           setErrorMsg(res.message);
@@ -365,15 +368,30 @@ export default function Login({ onLoginSuccess }) {
             </button>
 
             {isBiometricSupported && localStorage.getItem('fin_bio_cred_id_' + username.trim().toLowerCase()) && (
-              <button 
-                type="button" 
-                onClick={handleLoginWithBiometrics}
-                className="btn btn-secondary" 
-                style={{ width: '100%', padding: '12px', fontWeight: 600, marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                disabled={loading}
-              >
-                <Fingerprint size={16} /> Entrar com Biometria
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={handleLoginWithBiometrics}
+                  className="btn btn-secondary" 
+                  style={{ width: '100%', padding: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  disabled={loading}
+                >
+                  <Fingerprint size={16} /> Entrar com Biometria
+                </button>
+                {localStorage.getItem('fin_last_username') === username.trim().toLowerCase() && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setUsername('');
+                      setPassword('');
+                      localStorage.removeItem('fin_last_username');
+                    }}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '11px', cursor: 'pointer', alignSelf: 'center', textDecoration: 'underline' }}
+                  >
+                    Entrar com outro usuário
+                  </button>
+                )}
+              </div>
             )}
 
             <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px' }}>
