@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Wallet, Key, User, ShieldAlert, CheckCircle } from 'lucide-react';
-import { loginUser, registerUserPassword, registerSelfUser } from '../utils/storage';
+import { Wallet, Key, User, ShieldAlert, CheckCircle, Fingerprint } from 'lucide-react';
+import { loginUser, registerUserPassword, registerSelfUser, loginUserWithBiometrics } from '../utils/storage';
 
 export default function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -11,6 +11,11 @@ export default function Login({ onLoginSuccess }) {
 
   // View mode: 'login' | 'signup' | 'first_access'
   const [viewMode, setViewMode] = useState('login');
+
+  // Biometric login states
+  const [showBiometricRegisterPrompt, setShowBiometricRegisterPrompt] = useState(false);
+  const [tempUserForBiometrics, setTempUserForBiometrics] = useState(null);
+  const isBiometricSupported = !!window.PublicKeyCredential;
 
   // Forms state
   const [newPassword, setNewPassword] = useState('');
@@ -41,7 +46,12 @@ export default function Login({ onLoginSuccess }) {
       const res = await loginUser(username.trim(), password);
       
       if (res.success) {
-        onLoginSuccess(res.user);
+        if (isBiometricSupported && localStorage.getItem('fin_bio_reg_' + res.user.username) !== 'true') {
+          setTempUserForBiometrics(res.user);
+          setShowBiometricRegisterPrompt(true);
+        } else {
+          onLoginSuccess(res.user);
+        }
       } else if (res.code === 'FIRST_ACCESS') {
         setViewMode('first_access');
       } else {
@@ -50,6 +60,103 @@ export default function Login({ onLoginSuccess }) {
     } catch (err) {
       console.error(err);
       setErrorMsg('Erro na autenticação.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegisterBiometrics = async () => {
+    try {
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+      
+      const createCredentialOptions = {
+        publicKey: {
+          challenge: challenge,
+          rp: {
+            name: "Finanças Hub",
+            id: window.location.hostname
+          },
+          user: {
+            id: new TextEncoder().encode(tempUserForBiometrics.username),
+            name: tempUserForBiometrics.username,
+            displayName: tempUserForBiometrics.username
+          },
+          pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+          authenticatorSelection: {
+            authenticatorAttachment: "platform",
+            userVerification: "required"
+          },
+          timeout: 60000
+        }
+      };
+
+      const credential = await navigator.credentials.create(createCredentialOptions);
+      if (credential) {
+        localStorage.setItem('fin_bio_reg_' + tempUserForBiometrics.username, 'true');
+        localStorage.setItem('fin_bio_cred_id_' + tempUserForBiometrics.username, btoa(String.fromCharCode(...new Uint8Array(credential.rawId))));
+        setSuccessMsg('Biometria ativada com sucesso para este aparelho!');
+        setTimeout(() => {
+          onLoginSuccess(tempUserForBiometrics);
+        }, 1500);
+      }
+    } catch (err) {
+      console.error('Error registering biometrics:', err);
+      onLoginSuccess(tempUserForBiometrics);
+    } finally {
+      setShowBiometricRegisterPrompt(false);
+    }
+  };
+
+  const handleLoginWithBiometrics = async () => {
+    const cleanUser = username.trim().toLowerCase();
+    if (!cleanUser) {
+      setErrorMsg('Digite seu usuário primeiro para entrar com biometria.');
+      return;
+    }
+
+    const credIdBase64 = localStorage.getItem('fin_bio_cred_id_' + cleanUser);
+    if (!credIdBase64) {
+      setErrorMsg('Nenhuma biometria cadastrada neste aparelho para este usuário.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+
+    try {
+      const credId = new Uint8Array(
+        atob(credIdBase64)
+          .split("")
+          .map((c) => c.charCodeAt(0))
+      );
+
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge: challenge,
+          allowCredentials: [{
+            id: credId,
+            type: "public-key"
+          }],
+          userVerification: "required",
+          timeout: 60000
+        }
+      });
+
+      if (assertion) {
+        const res = await loginUserWithBiometrics(cleanUser);
+        if (res.success) {
+          onLoginSuccess(res.user);
+        } else {
+          setErrorMsg(res.message);
+        }
+      }
+    } catch (err) {
+      console.error('Biometric authentication failed:', err);
+      setErrorMsg('Falha na autenticação biométrica.');
     } finally {
       setLoading(false);
     }
@@ -257,6 +364,18 @@ export default function Login({ onLoginSuccess }) {
               {loading ? 'Entrando...' : 'Entrar'}
             </button>
 
+            {isBiometricSupported && localStorage.getItem('fin_bio_cred_id_' + username.trim().toLowerCase()) && (
+              <button 
+                type="button" 
+                onClick={handleLoginWithBiometrics}
+                className="btn btn-secondary" 
+                style={{ width: '100%', padding: '12px', fontWeight: 600, marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                disabled={loading}
+              >
+                <Fingerprint size={16} /> Entrar com Biometria
+              </button>
+            )}
+
             <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Não tem uma conta? </span>
               <button 
@@ -405,6 +524,64 @@ export default function Login({ onLoginSuccess }) {
           </form>
         )}
       </div>
+
+      {/* Biometrics Registration Prompt Modal */}
+      {showBiometricRegisterPrompt && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 3000,
+          padding: '20px'
+        }}>
+          <div className="card" style={{ maxWidth: '400px', width: '100%', padding: '24px', textAlign: 'center', background: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: 'var(--radius-full)',
+              background: 'rgba(99, 102, 241, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-primary)',
+              margin: '0 auto 16px'
+            }}>
+              <Fingerprint size={32} />
+            </div>
+            
+            <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '10px' }}>Ativar Acesso por Biometria?</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '24px' }}>
+              Deseja cadastrar a biometria (digital ou reconhecimento facial) deste dispositivo para entrar mais rápido no sistema nas próximas vezes?
+            </p>
+            
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={() => {
+                  setShowBiometricRegisterPrompt(false);
+                  onLoginSuccess(tempUserForBiometrics);
+                }} 
+                className="btn btn-secondary" 
+                style={{ flex: 1 }}
+              >
+                Agora não
+              </button>
+              <button 
+                onClick={handleRegisterBiometrics}
+                className="btn btn-primary" 
+                style={{ flex: 1 }}
+              >
+                Ativar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

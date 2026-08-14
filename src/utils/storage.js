@@ -121,6 +121,67 @@ export const loginUser = async (username, password) => {
   }
 };
 
+export const loginUserWithBiometrics = async (username) => {
+  const normUser = username.trim().toLowerCase();
+  
+  if (!isSupabaseConfigured) {
+    const localUsers = getLocalUsers();
+    const user = localUsers.find(u => u.username === normUser);
+    if (!user) return { success: false, message: 'Usuário não cadastrado.' };
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (user.expiration_date && todayStr > user.expiration_date) {
+      const updated = localUsers.map(u => u.username === normUser ? { ...u, is_active: false } : u);
+      saveLocalUsers(updated);
+      return { success: false, message: `Sua conta expirou em ${formatDateBR(user.expiration_date)}. Entre em contato com o administrador.` };
+    }
+
+    if (user.is_pending) {
+      return { success: false, message: 'Cadastro realizado! Sua conta está aguardando aprovação do administrador.' };
+    }
+
+    if (!user.is_active) return { success: false, message: 'Esta conta está inativa. Entre em contato com o administrador.' };
+    
+    if (user.password_hash === null) {
+      return { success: false, message: 'Cadastre sua senha primeiro antes de ativar a biometria.' };
+    }
+    
+    return { success: true, user };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', normUser)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return { success: false, message: 'Usuário não cadastrado.' };
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (data.expiration_date && todayStr > data.expiration_date) {
+      await toggleUserStatus(data.username, false);
+      return { success: false, message: `Sua conta expirou em ${formatDateBR(data.expiration_date)}. Entre em contato com o administrador.` };
+    }
+
+    if (data.is_pending) {
+      return { success: false, message: 'Cadastro realizado! Sua conta está aguardando aprovação do administrador.' };
+    }
+
+    if (!data.is_active) return { success: false, message: 'Esta conta está inativa. Entre em contato com o administrador.' };
+
+    if (data.password_hash === null) {
+      return { success: false, message: 'Cadastre sua senha primeiro antes de ativar a biometria.' };
+    }
+
+    return { success: true, user: data };
+  } catch (err) {
+    console.error('Error logging in user with biometrics:', err);
+    return { success: false, message: 'Erro na conexão com o banco de dados.' };
+  }
+};
+
 export const registerUserPassword = async (username, password) => {
   const normUser = username.trim().toLowerCase();
   const hashed = await hashPassword(password);
