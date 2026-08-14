@@ -406,13 +406,13 @@ export default function Dashboard({ profileData, onUpdateProfileData, selectedMo
                       </div>
                     </div>
                     
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: '0 0 95px', justifyContent: 'flex-end' }}>
                       <input 
                         type="number" 
                         value={g.target} 
                         onChange={(e) => handleUpdateEditingTarget(g.id, e.target.value)}
                         min="0" max="100" required 
-                        style={{ padding: '6px 12px', textAlign: 'right' }}
+                        style={{ padding: '6px 10px', textAlign: 'right', width: '100%', minWidth: '60px' }}
                       />
                       <span style={{ fontSize: '14px', fontWeight: 600 }}>%</span>
                     </div>
