@@ -11,7 +11,8 @@ import {
   LogOut,
   Settings,
   HelpCircle,
-  X
+  X,
+  Play
 } from 'lucide-react';
 import { 
   getActiveProfile, 
@@ -42,6 +43,11 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showTour, setShowTour] = useState(false);
+
+  // PWA installation states
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showAndroidInstallBanner, setShowAndroidInstallBanner] = useState(false);
+  const [showIOSInstallPrompt, setShowIOSInstallPrompt] = useState(false);
 
   // Load active profile and its data on start/user login
   useEffect(() => {
@@ -93,6 +99,51 @@ function App() {
     const [year, month] = selectedMonth.split('-').map(Number);
     const nextDate = new Date(year, month, 1);
     setSelectedMonth(nextDate.toISOString().substring(0, 7));
+  };
+
+  // PWA Installation Effects & Handlers
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      const isDismissed = localStorage.getItem('fin_pwa_dismissed') === 'true';
+      if (!isDismissed) {
+        setShowAndroidInstallBanner(true);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    const isIOSDismissed = localStorage.getItem('fin_pwa_ios_dismissed') === 'true';
+    
+    if (isIOS && !isStandalone && !isIOSDismissed) {
+      setShowIOSInstallPrompt(true);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleAndroidInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`PWA install prompt outcome: ${outcome}`);
+    setDeferredPrompt(null);
+    setShowAndroidInstallBanner(false);
+  };
+
+  const handleDismissAndroidBanner = () => {
+    localStorage.setItem('fin_pwa_dismissed', 'true');
+    setShowAndroidInstallBanner(false);
+  };
+
+  const handleDismissIOSPrompt = () => {
+    localStorage.setItem('fin_pwa_ios_dismissed', 'true');
+    setShowIOSInstallPrompt(false);
   };
 
   const formatMonthDisplay = (monthStr) => {
@@ -451,6 +502,95 @@ function App() {
             setShowTour(false);
           }} 
         />
+      )}
+
+      {/* PWA Android Install Banner */}
+      {showAndroidInstallBanner && (
+        <div style={{
+          position: 'fixed',
+          bottom: '76px',
+          left: '12px',
+          right: '12px',
+          background: 'var(--color-primary)',
+          color: '#fff',
+          padding: '12px 16px',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.4)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          zIndex: 2000,
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+            <span style={{ fontWeight: 700, fontSize: '13px' }}>Instalar Finanças Hub</span>
+            <span style={{ fontSize: '11px', opacity: 0.9 }}>Tenha a experiência de aplicativo em tela cheia!</span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button 
+              onClick={handleAndroidInstallClick}
+              className="btn"
+              style={{ background: '#fff', color: 'var(--color-primary)', padding: '6px 12px', fontSize: '12px', fontWeight: 700, border: 'none' }}
+            >
+              Instalar
+            </button>
+            <button 
+              onClick={handleDismissAndroidBanner}
+              style={{ background: 'none', border: 'none', color: '#fff', opacity: 0.8, cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* PWA iOS Install Tooltip */}
+      {showIOSInstallPrompt && (
+        <div style={{
+          position: 'fixed',
+          bottom: '76px',
+          left: '12px',
+          right: '12px',
+          background: 'rgba(25, 30, 45, 0.95)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid var(--border-color)',
+          color: '#fff',
+          padding: '16px',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+          zIndex: 2000,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-primary)' }}>Instalar no iPhone 📱</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Instale este app na sua tela de início para ocultar a barra de URL!</span>
+            </div>
+            <button 
+              onClick={handleDismissIOSPrompt}
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+            >
+              <X size={15} />
+            </button>
+          </div>
+          
+          <div style={{ 
+            fontSize: '11px', 
+            color: 'var(--text-primary)', 
+            background: 'rgba(255,255,255,0.03)', 
+            padding: '10px', 
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid rgba(255,255,255,0.03)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            lineHeight: 1.4
+          }}>
+            <span>Toque no botão de compartilhar (ícone de quadrado com seta para cima) e depois selecione <strong>Adicionar à Tela de Início</strong>.</span>
+          </div>
+        </div>
       )}
     </div>
   );
