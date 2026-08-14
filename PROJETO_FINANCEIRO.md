@@ -33,12 +33,14 @@ Um sistema moderno de controle financeiro pessoal e familiar com suporte a múlt
   * **Preservação de Dados**: Ao inativar uma conta, todos os dados financeiros do usuário são integralmente mantidos no banco de dados (não há exclusão de registros).
 * **Primeiro Acesso**: Novos usuários são criados sem senha (campo `password_hash` nulo). No primeiro login, a aplicação detecta e solicita a criação de uma senha personalizada.
 * **Reset de Senha**: O administrador pode resetar a senha de qualquer usuário através de um botão no painel de administração (o que limpa a senha no banco e força o usuário a criar uma nova senha no próximo login).
+* **Políticas de Senha Forte**: Exigência de no mínimo 8 caracteres, uma letra maiúscula e um caractere especial para cadastro de novas senhas.
 
 ### 2. Controle de Usuários Escalável (Painel de Administração)
 * **Barra de Pesquisa**: Adicionada busca em tempo real por nome de usuário para facilitar a localização em bancos de dados com muitos registros.
 * **Filtros Avançados**: Possibilidade de filtrar a listagem por status de conta (Ativos / Inativos) e por cargo/função (Administradores / Usuários Padrão).
 * **Tabela com Rolagem**: A listagem de usuários foi encapsulada em um wrapper com altura máxima fixa (`maxHeight: 350px`) e rolagem vertical interna, impedindo que uma grande quantidade de usuários empurre o layout da página para baixo indefinidamente.
 * **Métricas**: Exibição da quantidade de usuários filtrados vs total cadastrado.
+* **Solicitações de Acesso & Expiração**: Gerenciamento de novos cadastros de usuários que chegam com status pendente (`is_pending: true`). O administrador pode aprovar a entrada definindo uma data opcional de expiração da conta, após a qual a conta é automaticamente inativada e bloqueada no login.
 
 ### 3. Tour Interativo (Onboarding de Novos Usuários)
 * **Holofote Dinâmico**: Ao logar pela primeira vez, um tour guiado é iniciado, escurecendo a tela e destacando os componentes-chave passo a passo com contornos e balões informativos de ajuda.
@@ -46,9 +48,13 @@ Um sistema moderno de controle financeiro pessoal e familiar com suporte a múlt
 * **Persistência no Banco de Dados**: A conclusão ou cancelamento do tour é registrada no campo `tour_done` da tabela `users` do Supabase. Isso impede que o tour reapareça caso o usuário limpe o cache do navegador.
 * **Replay Manual**: O tour pode ser reiniciado a qualquer momento clicando no botão **Manual** no cabeçalho do site.
 
-### 4. Visualização Mobile Otimizada (Mobile UX)
+### 4. Visualização Mobile Otimizada (Mobile UX & PWA)
 * **Visualização por Cartões (Cards)**: Em viewports móveis (< 768px), as tabelas de lançamentos são ocultadas e convertidas para uma exibição de cartões individuais (estilo carteira digital).
 * **Empilhamento de Grid**: Todos os formulários e filtros de pesquisa se reorganizam automaticamente em uma única coluna no celular, evitando rolagens horizontais.
+* **Visual Nativo de Aplicativo**:
+  * **Barra de Navegação Inferior (Bottom Tabs)**: No celular, as abas de navegação são fixadas no rodapé da tela com ícones centralizados e visual translúcido limpo, igual a aplicativos nativos.
+  * **Cabeçalho Compacto**: O topo exibe um avatar circular com as iniciais do usuário, o mês de referência de forma reduzida e ações rápidas de manual e logout.
+  * **Suporte PWA**: Configurado o `manifest.json` e as tags `apple-mobile-web-app-capable` para permitir a instalação do site como aplicativo de tela cheia sem barras do navegador.
 
 ### 5. Lançamento com Frequência de "Assinatura"
 * **Opção de Assinatura**: Adicionada a opção "Assinatura / Mensalidade (Fixo no Cartão)" na frequência de repetição.
@@ -73,11 +79,10 @@ As despesas do cartão não são contabilizadas pelo mês calendário da transa�
 ## 📊 Estrutura de Pastas e Arquivos Principais
 
 * [`src/utils/supabaseClient.js`](file:///home/fabricio/fabricio/controle_financeiro_3/src/utils/supabaseClient.js): Inicializador do cliente Supabase.
-* [`src/utils/storage.js`](file:///home/fabricio/fabricio/controle_financeiro_3/src/utils/storage.js): Abstração de persistência assíncrona, validações de autenticação e gerenciamento de status de logins e tours.
+* [`src/utils/storage.js`](file:///home/fabricio/fabricio/controle_financeiro_3/src/utils/storage.js): Abstração de persistência assíncrona, validações de autenticação e gerenciamento de status de logins, senhas e tours.
 * [`src/utils/invoiceUtils.js`](file:///home/fabricio/fabricio/controle_financeiro_3/src/utils/invoiceUtils.js): Lógica de cálculo de faturas.
-* [`src/components/Login.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/Login.jsx): Formulário de autenticação e redefinição de senhas de primeiro acesso.
-* [`src/components/AdminPanel.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/AdminPanel.jsx): Painel do administrador para listagem, criação, inativação e reset de usuários.
-* [`src/components/InteractiveTour.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/InteractiveTour.jsx): Componente que renderiza o tour guiado e o spotlight nos elementos destacados.
+* [`src/components/Login.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/Login.jsx): Formulário de autenticação, registro e política de senhas.
+* [`src/components/AdminPanel.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/AdminPanel.jsx): Painel do administrador para listagem, criação, inativação, solicitações pendentes e vencimentos.
 * [`src/components/CreditCards.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/CreditCards.jsx): Gerenciamento de limites, faturas e parcelas.
 * [`src/components/Transactions.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/Transactions.jsx): Lançamento de despesas e receitas com visualização dupla (desktop/mobile) e controle de repetição.
 * [`src/components/Dashboard.jsx`](file:///home/fabricio/fabricio/controle_financeiro_3/src/components/Dashboard.jsx): Gráficos Recharts e conselhos financeiros baseados no usuário logado.
@@ -88,8 +93,6 @@ As despesas do cartão não são contabilizadas pelo mês calendário da transa�
 
 A aplicação está configurada e rodando no **Cloudflare Pages** com conexão direta ao **Supabase**. Os próximos passos são:
 
-1. **Configuração de Chaves do Banco**:
-   - Rodar o script SQL de criação das tabelas `users` (com colunas `is_active` e `tour_done`) e `profiles_data` no painel do Supabase.
-2. **Primeiro Acesso**:
-   - Acessar o link do seu projeto no Cloudflare Pages (ex: `https://controle-financeiro.pages.dev`).
-   - Logar com o usuário `admin`, deixar a senha em branco para cadastrá-la no primeiro acesso.
+1. **Testar no Celular**:
+   - Abrir o site no celular e selecionar "Adicionar à Tela de Início" no navegador (Safari no iPhone ou Chrome no Android).
+   - Abrir a aplicação através do ícone gerado para desfrutar da experiência em tela cheia idêntica a de um aplicativo de verdade!
